@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+// HTML
+<div>
+  <h1>Welcome to the Microplastics Identification Game!</h1>
+  <h3>Instructions: </h3>
+  <p>
+    This game will test your knowledge of identifying microplastics using Fourier Transform Infrared Spectroscopy (FTIR).
+  </p>
+  <p>
+    You will be presented with a series of spectra, and your job is to identify the type of microplastic present.
+  </p>
+  <p>
+    You will have a few seconds to make your selection from the options presented.
+    Good luck!
+  </p>
+  <button id="start-game">Start Game</button>
+</div>
+<div id="game-container">
+  <img src="spectrum.jpg" />
+  <div id="options">
+    <button id="option-1">Option 1</button>
+    <button id="option-2">Option 2</button>
+    <button id="option-3">Option 3</button>
+    <button id="option-4">Option 4</button>
+  </div>
+</div>
+
+// JavaScript
+<script>
+    var score = 0;
+
+document.getElementById("start-game").addEventListener("click", startGame);
+
+function startGame() {
+  // hide start button
+  document.getElementById("start-game").style.display = "none";
+  // show game container
+  document.getElementById("game-container").style.display = "block";
+  // start timer
+  setTimeout(endGame, 10000);
+  // get list of spectra from server
+  getSpectra();
+}
+
+function getSpectra() {
+  // make ajax request to server for list of spectra
+  // on success, display first spectrum and options
+  displaySpectrum(spectra[0]);
+}
+
+function displaySpectrum(spectrum) {
+  // display spectrum image
+  document.getElementById("game-container").querySelector("img").src = spectrum.image;
+  // display options
+  var options = document.getElementById("options");
+  options.querySelector("#option-1").innerText = spectrum.options[0];
+  options.querySelector("#option-2").innerText = spectrum.options[1];
+  options.querySelector("#option-3").innerText = spectrum.options[2];
+  options.querySelector("#option-4").innerText = spectrum.options[3];
+  // add click event listeners to options
+  options.querySelector("#option-1").addEventListener("click", checkAnswer);
+  options.querySelector("#option-2").addEventListener("click", checkAnswer);
+  options.querySelector("#option-3").addEventListener("click", checkAnswer);
+  options.querySelector("#option-4").addEventListener("click", checkAnswer);
+}
+
+function checkAnswer(event) {
+  // get user's selection
+  var selection = event.target.innerText;
+  // check if selection is correct
+  if (selection === spectra[0].answer) {
+    // increment score
+    score++;
+  }
+  // remove click event listeners from options
+  var options = document.getElementById("options");
+  options.querySelector("#option-1").removeEventListener("click", checkAnswer);
+  options.querySelector("#option-2").removeEventListener("click", checkAnswer);
+  options.querySelector("#option-3").removeEventListener("click", checkAnswer);
+  options.querySelector("#option-4").removeEventListener("click", checkAnswer);
+  // display next spectrum
+  displaySpectrum(spectra[1]);
+}
+
+function endGame() {
+  // hide game container
+  document.getElementById("game-container").style.display = "none";
+  // display score
+  alert("Your score is " + score + "!");
+}
+
+</script>
+
+</body>
+</html>
