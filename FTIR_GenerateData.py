@@ -214,7 +214,7 @@ class GenerateDate:
 
         uniqueID = np.unique(pid)
         uniquePN = np.unique(Pname)
-
+        pid= np.array(pid)
         for item in intensity:
             for val in item:
                 if val < 0:
