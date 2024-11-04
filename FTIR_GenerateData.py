@@ -327,7 +327,7 @@ class GenerateDate:
 
         return preprocessed_spectra
     def dataAugmenation(self,intensity, polymerID, waveLength, pName, randomSeed):
-        x_train, x_test, y_train, y_test = train_test_split(intensity, polymerID, test_size=0.7,
+        x_train, x_test, y_train, y_test = train_test_split(intensity, polymerID, test_size=0.3,
                                                             random_state=randomSeed)
 
         waveLength = np.array(waveLength, dtype=np.float)

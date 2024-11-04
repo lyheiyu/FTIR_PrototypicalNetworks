@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from typing import Union as U, Tuple as T
 from FTIR_ReaddataFrom500C4 import readFromPlastics500
+import torch
 def find_indices(array, max,min):
     indices = [i for i, x in enumerate(array) if x >=min and x<=max]
     return indices
@@ -707,6 +708,8 @@ def load_prototypes(filename):
 from keras import Model
 def perform_few_shot_learning2(model, data, labels, n_way, k_shot, n_query):
     support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(data, labels, n_way, k_shot, n_query)
+
+
     prototypes = compute_prototypes(support_set, support_labels, model)
     pred_labels = classify_query_samples(query_set, prototypes, model)
 
@@ -715,6 +718,55 @@ def perform_few_shot_learning2(model, data, labels, n_way, k_shot, n_query):
     return prototypes, accuracy
 
 
+def perform_few_shot_learning3(model, data, labels, n_way, k_shot, n_query):
+    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(data, labels, n_way, k_shot,
+                                                                                           n_query)
+
+    prototypes, cov_matrices = compute_prototypes_and_covariances(model, support_set, support_labels, n_way)
+    distances = classify_query2(model, query_set, prototypes, cov_matrices)
+    predicted_labels = torch.argmin(distances, dim=1)
+
+    accuracy = accuracy_score(query_labels, predicted_labels)
+
+
+    print(f'Few-shot learning accuracy: {accuracy:.4f}')
+    return prototypes, accuracy,cov_matrices
+def Fourthdataset2(model,x_test5,y_test5,pname5,new_prototypes,cmName,cov_matrices):
+    # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
+    #
+    # # 保存更新后的类原型
+    # save_prototypes(updated_prototypes, protoName)
+
+    # 假设我们有新的查询集数据new_query_set
+    # new_query_set = np.random.rand(75, 100, 1)  # 示例查询集数据
+
+    # 对新的查询集进行分类
+    distances = classify_query2(model, x_test5, new_prototypes, cov_matrices)
+    predicted_labels = torch.argmin(distances, dim=1)
+
+    from sklearn.metrics import accuracy_score, confusion_matrix
+    print(predicted_labels)
+    #pred_labels=pred_labels[pred_labels == 3] = 6
+    # for i in range(len(pred_labels)):
+    #     if pred_labels[i] not in y_test5:
+    #         if pred_labels[i] < 4:
+    #             pred_labels[i] = np.max(y_test5)
+    #         else:
+    #             pred_labels[i] = np.min(y_test5)
+    print(len(np.unique(predicted_labels)))
+    print(y_test5)
+    print(len(np.unique(y_test5)))
+    score = accuracy_score(y_test5, predicted_labels)
+    cm = confusion_matrix(y_test5, predicted_labels)
+    print(cm)
+    PN2 = []
+    for item in pname5:
+        if item not in PN2:
+            PN2.append(item)
+    print(PN2)
+    utils.plot_confusion_matrix(cm, PN2, cmName)
+
+    print(score)
 def Fourthdataset(x_test5,y_test5,pname5,new_prototypes,cmName):
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
     #
@@ -749,6 +801,122 @@ def Fourthdataset(x_test5,y_test5,pname5,new_prototypes,cmName):
     utils.plot_confusion_matrix(cm, PN2, cmName)
 
     print(score)
+def mahalanobis_distance( x, y, cov_matrix, epsilon=1e-3):
+    diff = x - y
+    # 增加正则化以防止协方差矩阵奇异
+    regularized_cov_matrix = cov_matrix + torch.eye(cov_matrix.size(0)) * epsilon
+    inv_cov_matrix = torch.inverse(regularized_cov_matrix)
+
+    # 计算马氏距离
+    distance = torch.sqrt(torch.clamp(torch.sum(diff @ inv_cov_matrix * diff, dim=-1), min=0))
+    return distance
+
+
+# 计算每个类的原型和协方差矩阵
+def compute_prototypes_and_covariances(encoder, support_set, support_labels, num_classes):
+    embeddings = encoder(support_set)
+    embeddings =embeddings.numpy()
+    print(
+        f"Embeddings stats: mean={embeddings.mean()}, std={embeddings.std()}, min={embeddings.min()}, max={embeddings.max()}")
+    prototypes = []
+    cov_matrices = []
+
+    for i in range(num_classes):
+        class_embeddings = embeddings[support_labels == i]
+        if class_embeddings.shape[0] == 0:
+            print(f"No samples found for class {i}")
+            continue
+
+        class_prototype = class_embeddings.mean(axis=0)
+        prototypes.append(class_prototype)
+
+        centered_embeddings = class_embeddings - class_prototype
+        cov_matrix = centered_embeddings.T @ centered_embeddings / class_embeddings.shape[0]
+        cov_matrices.append(cov_matrix)
+    prototypes = [torch.tensor(p) if isinstance(p, np.ndarray) else p for p in prototypes]
+    cov_matrices = [torch.tensor(cov) if isinstance(cov, np.ndarray) else cov for cov in cov_matrices]
+
+    return torch.stack(prototypes), cov_matrices
+def classify_query2(encoder, query_set, prototypes, cov_matrices):
+    # 获取查询样本的嵌入
+    query_embeddings = encoder.predict(query_set)
+
+    # 如果是单一标量或一维数组，调整形状以便与原型计算距离
+    if isinstance(query_embeddings, (np.ndarray, list)):
+        query_embeddings = np.array(query_embeddings)
+        if query_embeddings.ndim == 1:
+            query_embeddings = query_embeddings.reshape(1, -1)
+        elif query_embeddings.ndim == 0:
+            query_embeddings = query_embeddings[np.newaxis]
+        query_embeddings = torch.tensor(query_embeddings)
+    else:
+        query_embeddings = torch.tensor([[query_embeddings]])
+
+    # 存储所有查询样本的距离矩阵
+    distance_matrices = []
+
+    for query_embedding in query_embeddings:
+        distances = []
+        for class_index, prototype in enumerate(prototypes):
+            # 计算查询样本与原型的马氏距离
+            cov_matrix = cov_matrices[class_index]
+            dist = mahalanobis_distance(query_embedding, prototype, cov_matrix)
+            distances.append(dist)
+        # 将单个查询样本的距离作为矩阵存储
+        distance_matrices.append(torch.stack(distances))
+
+    # 将 distance_matrices 转换为 [batch_size, num_classes] 形状
+    distance_matrices = torch.stack(distance_matrices)
+
+    return distance_matrices
+# def classify_query(encoder, query_set, prototypes, cov_matrices):
+#     query_embeddings = encoder.predict(query_set)
+#
+#     # Check if query_embeddings is a single scalar or 1-dimensional array,
+#     # and reshape or convert it if needed
+#     if isinstance(query_embeddings, (np.ndarray, list)):
+#         # If it's an ndarray or list, check its shape
+#         query_embeddings = np.array(query_embeddings)
+#
+#         # Reshape if it's a 1D array or scalar to make it compatible for stacking
+#         if query_embeddings.ndim == 1:
+#             query_embeddings = query_embeddings.reshape(1, -1)
+#         elif query_embeddings.ndim == 0:
+#             query_embeddings = query_embeddings[np.newaxis]
+#
+#         # Convert to torch tensor after ensuring the correct shape
+#         query_embeddings = torch.tensor(query_embeddings)
+#     else:
+#         # If it's a scalar, wrap it as a single-element tensor
+#         query_embeddings = torch.tensor([[query_embeddings]])
+#     logits = []
+#
+#     for query_embedding in query_embeddings:
+#         distances = []
+#         for class_index, prototype in enumerate(prototypes):
+#             # 使用马氏距离
+#             cov_matrix = cov_matrices[class_index]
+#             dist = mahalanobis_distance(query_embedding, prototype, cov_matrix)
+#             distances.append(dist)
+#
+#         # 将所有类的距离存入 logits
+#         logits.append(torch.stack(distances))
+#
+#     # 将所有查询样本的距离拼接为 [batch_size, num_classes]
+#     logits = torch.stack(logits)
+
+    # return logits
+
+def infer(encoder, support_set, support_labels, query_set, query_labels, num_classes):
+    encoder.eval()
+    with torch.no_grad():
+        prototypes, cov_matrices = compute_prototypes_and_covariances(encoder, support_set, support_labels, num_classes)
+        logits = classify_query(encoder, query_set, prototypes, cov_matrices)
+        predicted_labels = torch.argmax(logits, dim=1)
+
+    # 打印预测结果
+    for i, predicted_label in enumerate(predicted_labels):
+        print(f"Query {i + 1}: Predicted label = {predicted_label.item()}, True label = {query_labels[i].item()}")
 
 if __name__ == '__main__':
 
@@ -756,10 +924,10 @@ if __name__ == '__main__':
 
     #x_train1,y_train1,x_test1,y_test1=dataAugmenation(firstData,pid1,wavenumber,pname1,1)
     # fileName='FTIR_PLastics500_c4.csv'
-    wavenumber4, forthData, pid4, pname4 = readFromPlastics500('FTIR_PLastics500_c4.csv')
-    wavenumber5, fifthData, pid5, pname5 = readFromPlastics500('FTIR_PLastics500_c8.csv')
+    wavenumber4, forthData, pid4, pname4 = readFromPlastics500('dataset/FTIR_PLastics500_c4.csv')
+    wavenumber5, fifthData, pid5, pname5 = readFromPlastics500('dataset/FTIR_PLastics500_c8.csv')
     #print(forthData.shape)
-    x_train1, y_train1, x_test1, y_test1 = dataAugmenation3(forthData, pid4, wavenumber4, pname4, 1)
+    x_train1, y_train1, x_test1, y_test1 = dataAugmenation3(firstData, pid1, wavenumber, pname1, 1)
 
     #x_train1, x_test1, y_train1, y_test1= train_test_split(forthData, pid4, test_size=0.7, random_state=1)
     fileName = 'firstDataset'
@@ -819,22 +987,30 @@ if __name__ == '__main__':
     # new_prototypes,acc= perform_few_shot_learning(feature_extractor_model, x_train2, y_train2,
     #                                               n_way=4, k_shot=5, n_query=5,offset=len(previous_prototypes))
 
-    #x_train4, x_test4, y_train4, y_test4 = train_test_split(forthData, pid4, test_size=0.3, random_state=1)
+    x_train4, x_test4, y_train4, y_test4 = train_test_split(forthData, pid4, test_size=0.3, random_state=1)
     x_train5, x_test5, y_train5, y_test5 = train_test_split(fifthData, pid5, test_size=0.3, random_state=1)
     # new_prototypes,acc= perform_few_shot_learning2(feature_extractor_model, x_train5, y_train5,
     #                                               n_way=6, k_shot=10, n_query=10)
-    new_prototypes, acc = perform_few_shot_learning2(feature_extractor_model, x_train5, y_train5,
+    new_prototypes, acc ,covMatrix= perform_few_shot_learning3(feature_extractor_model, x_train5, y_train5,
                                                    n_way=6, k_shot=10, n_query=10)
 
 
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
-    Fourthdataset(x_test5,y_test5,pname5,new_prototypes,'5th dataset')
-    new_prototypes2, acc = perform_few_shot_learning2(feature_extractor_model, x_train2, y_train2,
-                                                     n_way=4, k_shot=5, n_query=20)
+    Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'5th dataset',covMatrix)
+    new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
+                                                     n_way=4, k_shot=10, n_query=10)
 
-    Fourthdataset(x_test2, y_test2, pname2, new_prototypes2, '2nd dataset')
+    Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, '2nd dataset',covMatrix)
+
+    new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
+                                                                n_way=6, k_shot=20, n_query=20)
+
+    # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
+    #                                               n_query=70, 10)
+    # 更新旧的类原型
+    Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, '4th dataset', covMatrix)
 
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
     #
