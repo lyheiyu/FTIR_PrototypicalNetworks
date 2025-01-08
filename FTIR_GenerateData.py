@@ -209,8 +209,8 @@ class GenerateDate:
         maxVal = np.max(intensity)
 
         intensity = maxVal - intensity
-        wavenumber = np.array(wavenumber, dtype=np.float)
-        intensity = np.array(intensity, dtype=np.float)
+        wavenumber = np.array(wavenumber, dtype=np.float32)
+        intensity = np.array(intensity, dtype=np.float32)
 
         uniqueID = np.unique(pid)
         uniquePN = np.unique(Pname)
@@ -330,7 +330,7 @@ class GenerateDate:
         x_train, x_test, y_train, y_test = train_test_split(intensity, polymerID, test_size=0.3,
                                                             random_state=randomSeed)
 
-        waveLength = np.array(waveLength, dtype=np.float)
+        waveLength = np.array(waveLength, dtype=np.float32)
         datas = []
         datas2 = []
         PN = []
@@ -389,7 +389,7 @@ class GenerateDate:
     def dataAugmenation2(self, intensity, polymerID, waveLength, pName, randomSeed):
         x_train, x_test, y_train, y_test = train_test_split(intensity, polymerID, test_size=0.3,
                                                             random_state=randomSeed)
-        waveLength = np.array(waveLength, dtype=np.float)
+        waveLength = np.array(waveLength, dtype=np.float32)
         datas = []
         datas2 = []
         PN = []
@@ -520,11 +520,11 @@ class GenerateDate:
             for i in range(len(intensityDataset2)):
                 intensityDataset2[i] = intensityDataset2[i][::-1]
             # print('intensityDataset2',intensityDataset2.shape)
-            waveLength = np.array(waveLength, dtype=np.float)
+            waveLength = np.array(waveLength, dtype=np.float32)
             # print('wavelength',waveLength)
-            waveLength2 = np.array(waveLength2, dtype=np.float)
+            waveLength2 = np.array(waveLength2, dtype=np.float32)
 
-            waveLength4 = np.array(waveLength4, dtype=np.float)
+            waveLength4 = np.array(waveLength4, dtype=np.float32)
             # print('wavelength2',waveLength2)
             waveLength = waveLength[chooseIdex01:chooseIdex02]
             # print('wavelength', waveLength)

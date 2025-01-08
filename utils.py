@@ -416,7 +416,7 @@ class utils:
 
         # intensity= intensity.replace([np.inf, -np.inf], 0)
 
-        polymerID = np.array(polymerID,dtype=np.int)
+        polymerID = np.array(polymerID,dtype=np.int32)
         waveLength = dataset.iloc[0, :-2]
         intensity = np.array(intensity)
         waveLength = waveLength[::-1]
