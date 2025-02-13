@@ -23,8 +23,12 @@ class utils:
 
         scoreList=[]
         for score in scores:
-            scoreList.append(score(y_true,y_pre))
-            print(score.__name__,score(y_true,y_pre))
+         # if score is f1, recall, accuracy set the average to macro
+            if score.__name__ == 'recall_score' or score.__name__ == 'precision_score' or score.__name__ == 'f1_score':
+
+                scoreList.append(score(y_true,y_pre,average='macro'))
+            else: scoreList.append(score(y_true,y_pre))
+            # print(score.__name__,score(y_true,y_pre))
         return scoreList
     def mkdir(path):
         # 判断目录是否存在

@@ -1000,18 +1000,39 @@ if __name__ == '__main__':
     # 更新旧的类原型
     Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'5th dataset',covMatrix)
     new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
-                                                     n_way=4, k_shot=10, n_query=10)
+                                                     n_way=4, k_shot=20, n_query=10)
 
     Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, '2nd dataset',covMatrix)
 
     new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
-                                                                n_way=6, k_shot=20, n_query=20)
+                                                                n_way=6, k_shot=10, n_query=20)
 
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
     Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, '4th dataset', covMatrix)
-
+    from sklearn import svm
+    from sklearn.metrics import confusion_matrix
+    model = svm.SVC(kernel='linear')
+    # the y_train4 the class first 5 samples
+    # x_trains, x_tests, y_trains, y_tests = train_test_split(x_train4, y_train4, test_size=0.8, random_state=1)
+    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train4, y_train4, 6, 10,
+                                                                                           20)
+    print(len(support_set),len(support_labels),len(query_set),len(query_labels))
+    model.fit(support_set, support_labels)
+    y_pre= model.predict(x_test4)
+    print(y_pre)
+    cm = confusion_matrix(y_test4, y_pre)
+    print(cm)
+    print(pname4)
+    PN4 = []
+    for item in pname4:
+        if item not in PN4:
+            PN4.append(item)
+    print(PN4)
+    utils.plot_confusion_matrix(cm,PN4,'Svm 4th dataset')
+    scores= utils.printScore(y_pre, y_test4)
+    print(scores)
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
     #
     # # 保存更新后的类原型
