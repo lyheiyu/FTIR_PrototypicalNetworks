@@ -76,24 +76,31 @@ class MAML:
 
     def inner_update(self, x_support, y_support, classifier_head):
         """
-        在支持集上进行几步梯度更新，只更新分类头权重，或（可选）也更新特征提取器。
+        Only update the classifier head, keeping the feature extractor frozen.
         """
         updated_weights = classifier_head.get_weights()
 
-        # 执行 num_inner_steps 步
         for step in range(self.num_inner_steps):
             with tf.GradientTape() as tape:
-                # 注意，如果想一起更新特征提取器，需要把 feature_extractor.trainable_variables 也加进来
-                features = self.feature_extractor(x_support, training=True)
-                logits = self._forward_with_weights(features, classifier_head, updated_weights)
-                loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)(
-                    y_support, logits)
+                # Ensure classifier head is tracked for gradients
+                tape.watch(classifier_head.trainable_variables)
 
-            # 只对分类头做梯度
-            grads = tape.gradient(loss, [tf.Variable(w) for w in updated_weights])
-            updated_weights = [w - self.inner_lr*g for w, g in zip(updated_weights, grads)]
+                features = self.feature_extractor(x_support, training=False)  # Set training=False to freeze
+                logits = classifier_head(features, training=True)
+                loss = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)(y_support, logits)
 
-        return updated_weights
+            # Compute gradients
+            grads = tape.gradient(loss, classifier_head.trainable_variables)
+
+            # Check if any gradients are None
+            if any(g is None for g in grads):
+                raise ValueError("Gradients contain None. Check classifier_head and feature_extractor.")
+
+            # Update classifier head weights
+            optimizer = tf.keras.optimizers.Adam(self.inner_lr)
+            optimizer.apply_gradients(zip(grads, classifier_head.trainable_variables))
+
+        return classifier_head.get_weights()
 
     def model_with_updated_weights(self, x, classifier_head, updated_weights):
         features = self.feature_extractor(x, training=False)
@@ -248,6 +255,15 @@ if __name__ == "__main__":
     classifier_head1 = tf.keras.Sequential([
         tf.keras.layers.Dense(6, activation='softmax')
     ])
+
+    # Explicitly build the classifier head with a known input shape
+    classifier_head1.build(input_shape=(None, 64))  # Adjust 64 to match feature extractor output dimension
+    classifier_head2 = tf.keras.Sequential([
+        tf.keras.layers.Dense(6, activation='softmax')
+    ])
+
+    # Explicitly build the classifier head with a known input shape
+    classifier_head2.build(input_shape=(None, 64))
     # # 显式 build
     # classifier_head1.build(input_shape=(None, 64))
     # classifier_head2 = tf.keras.Sequential([
@@ -255,12 +271,16 @@ if __name__ == "__main__":
     # ])
     # # 显式 build
     # classifier_head2.build(input_shape=(None, 64))
-    #meta_dataset.append((x_train5, y_train5, x_test5, y_test5, classifier_head))
+
     meta_dataset.append((x_train4, y_train4, x_test4, y_test4, classifier_head1))
+
+    #meta_dataset.append((x_train5, y_train5, x_test5, y_test5, classifier_head2))
     # 创建 MAML 实例，用“预训练后的” feature_extractor 作为初始状态
-    maml = MAML(feature_extractor, inner_lr=1e-3, outer_lr=1e-4, num_inner_steps=1)
+    maml = MAML(feature_extractor, inner_lr=1e-3, outer_lr=1e-4, num_inner_steps=5)
     print("\n===== Start MAML Meta-Training =====")
-    maml.train(meta_dataset, epochs=20)
+    for layer in feature_extractor.layers:
+        layer.trainable = True
+    maml.train(meta_dataset, epochs=100)
 
 
     def fine_tune_and_evaluate(maml_obj, x_support, y_support, x_query, y_query, classifier_head):
@@ -280,3 +300,7 @@ if __name__ == "__main__":
     (x_support, y_support, x_query, y_query, classifier_head) = meta_dataset[0]
     acc_0 = fine_tune_and_evaluate(maml, x_support, y_support, x_query, y_query, classifier_head)
     print(f"After MAML, Task 1 accuracy = {acc_0:.4f}")
+    meta_dataset.append((x_train5, y_train5, x_test5, y_test5, classifier_head2))
+    (x_support, y_support, x_query, y_query, classifier_head) = meta_dataset[1]
+    acc_0 = fine_tune_and_evaluate(maml, x_support, y_support, x_query, y_query, classifier_head)
+    print(f"After MAML, Task 2 accuracy = {acc_0:.4f}")

@@ -745,7 +745,7 @@ def Fourthdataset2(model,x_test5,y_test5,pname5,new_prototypes,cmName,cov_matric
     predicted_labels = torch.argmin(distances, dim=1)
 
     from sklearn.metrics import accuracy_score, confusion_matrix
-    print(predicted_labels)
+    # print(predicted_labels)
     #pred_labels=pred_labels[pred_labels == 3] = 6
     # for i in range(len(pred_labels)):
     #     if pred_labels[i] not in y_test5:
@@ -753,19 +753,19 @@ def Fourthdataset2(model,x_test5,y_test5,pname5,new_prototypes,cmName,cov_matric
     #             pred_labels[i] = np.max(y_test5)
     #         else:
     #             pred_labels[i] = np.min(y_test5)
-    print(len(np.unique(predicted_labels)))
-    print(y_test5)
-    print(len(np.unique(y_test5)))
+    # print(len(np.unique(predicted_labels)))
+    # print(y_test5)
+    # print(len(np.unique(y_test5)))
     score = accuracy_score(y_test5, predicted_labels)
     cm = confusion_matrix(y_test5, predicted_labels)
-    print(cm)
     PN2 = []
     for item in pname5:
         if item not in PN2:
             PN2.append(item)
     print(PN2)
     utils.plot_confusion_matrix(cm, PN2, cmName)
-
+    scores = utils.printScore(predicted_labels, y_test5)
+    print(scores)
     print(score)
 def Fourthdataset(x_test5,y_test5,pname5,new_prototypes,cmName):
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
@@ -907,16 +907,16 @@ def classify_query2(encoder, query_set, prototypes, cov_matrices):
 
     # return logits
 
-def infer(encoder, support_set, support_labels, query_set, query_labels, num_classes):
-    encoder.eval()
-    with torch.no_grad():
-        prototypes, cov_matrices = compute_prototypes_and_covariances(encoder, support_set, support_labels, num_classes)
-        logits = classify_query(encoder, query_set, prototypes, cov_matrices)
-        predicted_labels = torch.argmax(logits, dim=1)
-
-    # 打印预测结果
-    for i, predicted_label in enumerate(predicted_labels):
-        print(f"Query {i + 1}: Predicted label = {predicted_label.item()}, True label = {query_labels[i].item()}")
+# def infer(encoder, support_set, support_labels, query_set, query_labels, num_classes):
+#     encoder.eval()
+#     with torch.no_grad():
+#         prototypes, cov_matrices = compute_prototypes_and_covariances(encoder, support_set, support_labels, num_classes)
+#         logits = classify_query(encoder, query_set, prototypes, cov_matrices)
+#         predicted_labels = torch.argmax(logits, dim=1)
+#
+#     # 打印预测结果
+#     for i, predicted_label in enumerate(predicted_labels):
+#         print(f"Query {i + 1}: Predicted label = {predicted_label.item()}, True label = {query_labels[i].item()}")
 
 if __name__ == '__main__':
 
@@ -927,21 +927,22 @@ if __name__ == '__main__':
     wavenumber4, forthData, pid4, pname4 = readFromPlastics500('dataset/FTIR_PLastics500_c4.csv')
     wavenumber5, fifthData, pid5, pname5 = readFromPlastics500('dataset/FTIR_PLastics500_c8.csv')
     #print(forthData.shape)
-    x_train1, y_train1, x_test1, y_test1 = dataAugmenation3(firstData, pid1, wavenumber, pname1, 1)
+    # x_train1, y_train1, x_test1, y_test1 = dataAugmenation3(firstData, pid1, wavenumber, pname1, 1)
 
-    #x_train1, x_test1, y_train1, y_test1= train_test_split(forthData, pid4, test_size=0.7, random_state=1)
-    fileName = 'firstDataset'
+    x_train1, x_test1, y_train1, y_test1= train_test_split(forthData, pid4, test_size=0.7, random_state=1)
+    # fileName = 'firstDataset'
+    fileName = '4thDataset'
     # model = create_model(len(x_train1[0]))
     # #
-    # model.fit(x_train1, y_train1, epochs=10, batch_size=256,validation_split=0.2)
+    # model.fit(x_train1, y_train1, epochs=20, batch_size=64,validation_split=0.2)
     #
-    # model.save('Original_model.h5')
-    #
+    # # model.save('Original_model.h5')
+    # model.save('Original_model2.h5')
     # feature_extractor_model = Model(model.inputs, model.layers[-2].output)
-    # #
+    # # # #
+    # # # # #
     # # #
-    #
-    # prototyes=compute_prototypes(x_train1,y_train1,feature_extractor_model)
+    # # # prototyes=compute_prototypes(x_train1,y_train1,feature_extractor_model)
     # extrModelName='model/feature_extractor'+fileName+'_model.h5'
     # feature_extractor_model.save(extrModelName)
     extrModelName='model/feature_extractor'+fileName+'_model.h5'
@@ -952,7 +953,7 @@ if __name__ == '__main__':
 
 
     # feature_extractor_model = load_model('feature_extractor_model.h5')
-    feature_extractor_model.summary()
+    # feature_extractor_model.summary()
     # previous_prototypes = prototyes
     # 加载之前保存的类原型
     # previous_prototypes = load_prototypes(protoName)
@@ -977,7 +978,7 @@ if __name__ == '__main__':
    #  # pidM2=numpy.array(pidM2)
    #
    #  print(pidM4)
-    x_train2, y_train2, x_test2, y_test2 = dataAugmenation2(secondData, pid2, wavenumber, pname2, 2)
+    x_train2, y_train2, x_test2, y_test2 = dataAugmenation2(secondData, pid2, wavenumber, pname2, 1)
 
     # 计算新的类原型
     #x_train2, x_test2, y_train2, y_test2 = train_test_split(secondData, pid2, test_size=0.3, random_state=1)
@@ -991,47 +992,65 @@ if __name__ == '__main__':
     x_train5, x_test5, y_train5, y_test5 = train_test_split(fifthData, pid5, test_size=0.3, random_state=1)
     # new_prototypes,acc= perform_few_shot_learning2(feature_extractor_model, x_train5, y_train5,
     #                                               n_way=6, k_shot=10, n_query=10)
+    # 5th dataset
     new_prototypes, acc ,covMatrix= perform_few_shot_learning3(feature_extractor_model, x_train5, y_train5,
-                                                   n_way=6, k_shot=10, n_query=10)
-
+                                                   n_way=6, k_shot=5, n_query=20)
 
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
     Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'5th dataset',covMatrix)
+    # 2nd dataset
     new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
-                                                     n_way=4, k_shot=20, n_query=10)
+                                                     n_way=4, k_shot=5, n_query=20)
 
     Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, '2nd dataset',covMatrix)
-
+    # 4th dataset
     new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
-                                                                n_way=6, k_shot=10, n_query=20)
-
+                                                                n_way=6, k_shot=5, n_query=20)
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
     Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, '4th dataset', covMatrix)
+    # first dataset
+    x_train1, x_test1, y_train1, y_test1 = train_test_split(firstData, pid1, test_size=0.3, random_state=1)
+
+    new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train1, y_train1,
+                                                                n_way=11, k_shot=6, n_query=1)
+    # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
+    #                                               n_query=70, 10)
+    # 更新旧的类原型
+    Fourthdataset2(feature_extractor_model, x_test1, y_test1, pname1, new_prototypes, '1st dataset', covMatrix)
     from sklearn import svm
     from sklearn.metrics import confusion_matrix
+    from sklearn.neighbors import KNeighborsClassifier
     model = svm.SVC(kernel='linear')
+    knn = KNeighborsClassifier(n_neighbors=3)
     # the y_train4 the class first 5 samples
     # x_trains, x_tests, y_trains, y_tests = train_test_split(x_train4, y_train4, test_size=0.8, random_state=1)
-    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train4, y_train4, 6, 10,
+    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train5, y_train5, 6, 5,
                                                                                            20)
     print(len(support_set),len(support_labels),len(query_set),len(query_labels))
     model.fit(support_set, support_labels)
-    y_pre= model.predict(x_test4)
-    print(y_pre)
-    cm = confusion_matrix(y_test4, y_pre)
-    print(cm)
-    print(pname4)
+    knn.fit(support_set, support_labels)
+    y_pre= model.predict(x_test5)
+    y_preKnn = knn.predict(x_test5)
+    # print(y_pre)
+    cm = confusion_matrix(y_test5, y_pre)
+    cmknn= confusion_matrix(y_test5, y_preKnn)
+    # print(cm)
+    # print(pname5)
+    pname=pname5
     PN4 = []
-    for item in pname4:
+    for item in pname:
         if item not in PN4:
             PN4.append(item)
-    print(PN4)
-    utils.plot_confusion_matrix(cm,PN4,'Svm 4th dataset')
-    scores= utils.printScore(y_pre, y_test4)
+    # print(PN4)
+    utils.plot_confusion_matrix(cm,PN4,'Svm 5th dataset')
+    scores= utils.printScore(y_pre, y_test5)
+    print(scores)
+    utils.plot_confusion_matrix(cmknn, PN4, 'Knn 5th dataset')
+    scores = utils.printScore(y_preKnn, y_test5)
     print(scores)
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
     #
