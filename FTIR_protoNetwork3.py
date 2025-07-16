@@ -891,7 +891,9 @@ def classify_mahalanobis(X_query, prototypes, inv_cov):
         predictions.append(np.argmin(dists))
     return np.array(predictions)
 
-def compute_prototypes_and_shared_cov(encoder, support_set, support_labels, num_classes):
+def compute_prototypes_and_shared_cov(encoder, support_set, support_labels, num_classes,k_shot,nquery):
+    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(support_set, support_labels, num_classes, k_shot, nquery)
+
     embeddings = encoder.predict(support_set)  # NumPy array
     prototypes = []
     all_embeddings = []
@@ -1073,37 +1075,39 @@ if __name__ == '__main__':
     #                                               n_way=6, k_shot=10, n_query=10)
     # 5th dataset
     new_prototypes, acc ,covMatrix= perform_few_shot_learning3(feature_extractor_model, x_train5, y_train5,
-                                                   n_way=6, k_shot=5, n_query=20)
+                                                   n_way=6, k_shot=3, n_query=20)
 
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
     Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'c8 dataset -euclidean distance',covMatrix)
     prototypes, shared_cov = compute_prototypes_and_shared_cov(
-        encoder=feature_extractor_model,
-        support_set=x_train5,
-        support_labels=y_train5,
-        num_classes=6
+       feature_extractor_model,
+        x_train5,
+        y_train5,
+        6,
+       3,20
     )
 
     evaluate_mahalanobis_classifier(feature_extractor_model,x_test5,y_test5,pname5,prototypes,'c8 dataset Mahalanobis distance',shared_cov)
     # 2nd dataset
     new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
-                                                     n_way=4, k_shot=5, n_query=20)
+                                                     n_way=4, k_shot=3, n_query=20)
 
     Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, '2nd dataset',covMatrix)
     # 4th dataset
     new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
-                                                                n_way=6, k_shot=5, n_query=20)
+                                                                n_way=6, k_shot=3, n_query=20)
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
     Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, 'c4 dataset -euclidean distance', covMatrix)
     prototypes, shared_cov = compute_prototypes_and_shared_cov(
-        encoder=feature_extractor_model,
-        support_set=x_train5,
-        support_labels=y_train5,
-        num_classes=6
+        feature_extractor_model,
+        x_train4,
+        y_train4,
+        6,
+        3, 20
     )
 
     evaluate_mahalanobis_classifier(feature_extractor_model, x_test4, y_test4, pname4, prototypes, 'c4 dataset-Mahalanobis distance',
@@ -1112,7 +1116,7 @@ if __name__ == '__main__':
     x_train1, x_test1, y_train1, y_test1 = train_test_split(firstData, pid1, test_size=0.3, random_state=1)
 
     new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train1, y_train1,
-                                                                n_way=11, k_shot=5, n_query=1)
+                                                                n_way=11, k_shot=3, n_query=1)
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型

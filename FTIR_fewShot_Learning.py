@@ -994,24 +994,24 @@ if __name__ == '__main__':
     #                                               n_way=6, k_shot=10, n_query=10)
     # 5th dataset
     new_prototypes, acc ,covMatrix= perform_few_shot_learning3(feature_extractor_model, x_train5, y_train5,
-                                                   n_way=6, k_shot=5, n_query=20)
+                                                   n_way=6, k_shot=3, n_query=20)
 
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
-    Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'5th dataset',covMatrix)
+    Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'c8 dataset - adapted Mahalanobis',covMatrix)
     # 2nd dataset
     new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
                                                      n_way=4, k_shot=3, n_query=20)
 
-    Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, '2nd dataset',covMatrix)
+    Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, 'Jung dataset- adapted Mahalanobis',covMatrix)
     # 4th dataset
     new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
                                                                 n_way=6, k_shot=3, n_query=20)
     # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
     #                                               n_query=70, 10)
     # 更新旧的类原型
-    Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, '4th dataset', covMatrix)
+    Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, 'c4 - adapted Mahalanobis', covMatrix)
     # first dataset
     x_train1, x_test1, y_train1, y_test1 = train_test_split(firstData, pid1, test_size=0.3, random_state=1)
 
@@ -1028,7 +1028,7 @@ if __name__ == '__main__':
     knn = KNeighborsClassifier(n_neighbors=3)
     # the y_train4 the class first 5 samples
     # x_trains, x_tests, y_trains, y_tests = train_test_split(x_train4, y_train4, test_size=0.8, random_state=1)
-    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train5, y_train5, 6, 5,
+    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train5, y_train5, 6, 3,
                                                                                            20)
     print(len(support_set),len(support_labels),len(query_set),len(query_labels))
     model.fit(support_set, support_labels)
@@ -1046,10 +1046,10 @@ if __name__ == '__main__':
         if item not in PN4:
             PN4.append(item)
     # print(PN4)
-    utils.plot_confusion_matrix(cm,PN4,'Svm 5th dataset')
+    utils.plot_confusion_matrix(cm,PN4,'Svm c4 dataset')
     scores= utils.printScore(y_pre, y_test5)
     print(scores)
-    utils.plot_confusion_matrix(cmknn, PN4, 'Knn 5th dataset')
+    utils.plot_confusion_matrix(cmknn, PN4, 'Knn c8 dataset')
     scores = utils.printScore(y_preKnn, y_test5)
     print(scores)
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
