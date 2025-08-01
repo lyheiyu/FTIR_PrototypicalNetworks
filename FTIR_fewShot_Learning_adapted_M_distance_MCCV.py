@@ -763,10 +763,11 @@ def Fourthdataset2(model,x_test5,y_test5,pname5,new_prototypes,cmName,cov_matric
         if item not in PN2:
             PN2.append(item)
     print(PN2)
-    utils.plot_confusion_matrix(cm, PN2, cmName)
-    scores = utils.printScore(predicted_labels, y_test5)
-    print(scores)
-    print(score)
+    # utils.plot_confusion_matrix(cm, PN2, cmName)
+    scores = utils.printScore(y_test5,predicted_labels)
+    # print(scores)
+    # print(score)
+    return  scores,cm
 def Fourthdataset(x_test5,y_test5,pname5,new_prototypes,cmName):
     # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
     #
@@ -978,112 +979,176 @@ if __name__ == '__main__':
    #  # pidM2=numpy.array(pidM2)
    #
    #  print(pidM4)
-    x_train2, y_train2, x_test2, y_test2 = dataAugmenation2(secondData, pid2, wavenumber, pname2, 1)
+    cmTotal = np.zeros((6, 6))
+    cmKNNTotal= np.zeros((6, 6))
+    cmSVMTotal=np.zeros((6, 6))
+    cmc4AMTotal=np.zeros((6, 6))
+    cmc8AMTotal=np.zeros((6, 6))
 
-    # 计算新的类原型
-    #x_train2, x_test2, y_train2, y_test2 = train_test_split(secondData, pid2, test_size=0.3, random_state=1)
-    #x_train2, x_test2, y_train2, y_test2 = train_test_split(secondData, pidM2, test_size=0.7, random_state=1)
-    # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
-    #                                               n_query=70,10)
-    # new_prototypes,acc= perform_few_shot_learning(feature_extractor_model, x_train2, y_train2,
-    #                                               n_way=4, k_shot=5, n_query=5,offset=len(previous_prototypes))
+    m = 0
+    t_report = []
+    scoreTotalAdapted = np.zeros(5)
+    scoreSvmTotal = np.zeros(5)
+    scoreKNNTotal = np.zeros(5)
+    scorec4amTotal = np.zeros(5)
+    scorec8amTotal = np.zeros(5)
 
-    x_train4, x_test4, y_train4, y_test4 = train_test_split(forthData, pid4, test_size=0.3, random_state=1)
-    x_train5, x_test5, y_train5, y_test5 = train_test_split(fifthData, pid5, test_size=0.3, random_state=1)
-    # new_prototypes,acc= perform_few_shot_learning2(feature_extractor_model, x_train5, y_train5,
-    #                                               n_way=6, k_shot=10, n_query=10)
-    # 5th dataset
-    new_prototypes, acc ,covMatrix= perform_few_shot_learning3(feature_extractor_model, x_train5, y_train5,
-                                                   n_way=6, k_shot=5, n_query=20)
+    for i in range(20):
 
-    # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
-    #                                               n_query=70, 10)
-    # 更新旧的类原型
-    Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'c8 dataset - adapted Mahalanobis',covMatrix)
-    # 2nd dataset
-    new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
-                                                     n_way=4, k_shot=5, n_query=20)
+        x_train2, y_train2, x_test2, y_test2 = dataAugmenation2(secondData, pid2, wavenumber, pname2, i)
 
-    Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, 'Jung dataset- adapted Mahalanobis',covMatrix)
-    # 4th dataset
-    new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
-                                                                n_way=6, k_shot=5, n_query=20)
-    # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
-    #                                               n_query=70, 10)
-    # 更新旧的类原型
-    Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, 'c4 - adapted Mahalanobis', covMatrix)
-    # first dataset
-    x_train1, x_test1, y_train1, y_test1 = train_test_split(firstData, pid1, test_size=0.3, random_state=1)
+        # 计算新的类原型
+        #x_train2, x_test2, y_train2, y_test2 = train_test_split(secondData, pid2, test_size=0.3, random_state=1)
+        #x_train2, x_test2, y_train2, y_test2 = train_test_split(secondData, pidM2, test_size=0.7, random_state=1)
+        # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
+        #                                               n_query=70,10)
+        # new_prototypes,acc= perform_few_shot_learning(feature_extractor_model, x_train2, y_train2,
+        #                                               n_way=4, k_shot=5, n_query=5,offset=len(previous_prototypes))
 
-    new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train1, y_train1,
-                                                                n_way=11, k_shot=5, n_query=1)
-    # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
-    #                                               n_query=70, 10)
-    # 更新旧的类原型
-    Fourthdataset2(feature_extractor_model, x_test1, y_test1, pname1, new_prototypes, '1st dataset', covMatrix)
-    from sklearn import svm
-    from sklearn.metrics import confusion_matrix
-    from sklearn.neighbors import KNeighborsClassifier
-    model = svm.SVC(kernel='linear')
-    knn = KNeighborsClassifier(n_neighbors=3)
-    # the y_train4 the class first 5 samples
-    # x_trains, x_tests, y_trains, y_tests = train_test_split(x_train4, y_train4, test_size=0.8, random_state=1)
-    support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train5, y_train5, 6, 5,
-                                                                                           20)
-    print(len(support_set),len(support_labels),len(query_set),len(query_labels))
-    model.fit(support_set, support_labels)
-    knn.fit(support_set, support_labels)
-    y_pre= model.predict(x_test5)
-    y_preKnn = knn.predict(x_test5)
-    # print(y_pre)
-    cm = confusion_matrix(y_test5, y_pre)
-    cmknn= confusion_matrix(y_test5, y_preKnn)
-    # print(cm)
-    # print(pname5)
-    pname=pname5
-    PN4 = []
-    for item in pname:
+        x_train4, x_test4, y_train4, y_test4 = train_test_split(forthData, pid4, test_size=0.3, random_state=i)
+        x_train5, x_test5, y_train5, y_test5 = train_test_split(fifthData, pid5, test_size=0.3, random_state=i)
+        # new_prototypes,acc= perform_few_shot_learning2(feature_extractor_model, x_train5, y_train5,
+        #                                               n_way=6, k_shot=10, n_query=10)
+        # 5th dataset
+        new_prototypes, acc ,covMatrix= perform_few_shot_learning3(feature_extractor_model, x_train5, y_train5,
+                                                       n_way=6, k_shot=5, n_query=20)
+
+        # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
+        #                                               n_query=70, 10)
+        # 更新旧的类原型
+        c8socresofAm,c8cmAdaptedMahala=Fourthdataset2(feature_extractor_model,x_test5,y_test5,pname5,new_prototypes,'c8 dataset - adapted Mahalanobis',covMatrix)
+        # 2nd dataset
+        new_prototypes2, acc,covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train2, y_train2,
+                                                         n_way=4, k_shot=5, n_query=20)
+
+        Fourthdataset2(feature_extractor_model,x_test2, y_test2, pname2, new_prototypes2, 'Jung dataset- adapted Mahalanobis',covMatrix)
+        # 4th dataset
+        new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train4, y_train4,
+                                                                    n_way=6, k_shot=5, n_query=20)
+        # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
+        #                                               n_query=70, 10)
+        # 更新旧的类原型
+        c4socresofAm,c4cmAdaptedMahala=Fourthdataset2(feature_extractor_model, x_test4, y_test4, pname4, new_prototypes, 'c4 - adapted Mahalanobis', covMatrix)
+        # first dataset
+        x_train1, x_test1, y_train1, y_test1 = train_test_split(firstData, pid1, test_size=0.3, random_state=1)
+
+        new_prototypes, acc, covMatrix = perform_few_shot_learning3(feature_extractor_model, x_train1, y_train1,
+                                                                    n_way=11, k_shot=5, n_query=1)
+        # new_prototypes, _ = perform_few_shot_learning(feature_extractor_model, x_train2, y_train2, n_way=4, k_shot=30,
+        #                                               n_query=70, 10)
+        # 更新旧的类原型
+        Fourthdataset2(feature_extractor_model, x_test1, y_test1, pname1, new_prototypes, '1st dataset', covMatrix)
+        from sklearn import svm
+        from sklearn.metrics import confusion_matrix
+        from sklearn.neighbors import KNeighborsClassifier
+        model = svm.SVC(kernel='linear')
+        knn = KNeighborsClassifier(n_neighbors=3)
+        # the y_train4 the class first 5 samples
+        # x_trains, x_tests, y_trains, y_tests = train_test_split(x_train4, y_train4, test_size=0.8, random_state=1)
+        support_set, support_labels, query_set, query_labels = generate_support_and_query_sets(x_train5, y_train5, 6, 5,
+                                                                                               20)
+        print(len(support_set),len(support_labels),len(query_set),len(query_labels))
+        model.fit(support_set, support_labels)
+        knn.fit(support_set, support_labels)
+        y_pre= model.predict(x_test5)
+        y_preKnn = knn.predict(x_test5)
+        # print(y_pre)
+        cm = confusion_matrix(y_test5, y_pre)
+        cmknn= confusion_matrix(y_test5, y_preKnn)
+        # print(cm)
+        # print(pname5)
+        pname=pname5
+        PN4 = []
+        for item in pname:
+            if item not in PN4:
+                PN4.append(item)
+        # print(PN4)
+        # utils.plot_confusion_matrix(cm,PN4,'Svm c8 dataset')
+        score1SVM= utils.printScore(y_pre, y_test5)
+        # print(score1SVM)
+        # utils.plot_confusion_matrix(cmknn, PN4, 'Knn c8 dataset')
+        score1KNN = utils.printScore(y_preKnn, y_test5)
+        print(score1KNN)
+        cmc4AMTotal=cmc4AMTotal+c4cmAdaptedMahala
+        cmc8AMTotal=cmc8AMTotal+c8cmAdaptedMahala
+        cmTotal = cmTotal + cm
+        cmSVMTotal = cmSVMTotal + cm
+        cmKNNTotal = cmKNNTotal + cmknn
+        scoreSvmTotal += score1SVM
+        scoreKNNTotal += score1KNN
+        scorec4amTotal+=c4socresofAm
+        scorec8amTotal+=c8socresofAm
+        m += 1
+        # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
+        #
+        # # 保存更新后的类原型
+        # save_prototypes(updated_prototypes, protoName)
+        #
+        # # 假设我们有新的查询集数据new_query_set
+        # # new_query_set = np.random.rand(75, 100, 1)  # 示例查询集数据
+        #
+        # # 对新的查询集进行分类
+        # pred_labels = classify_query_samples(x_test2, updated_prototypes, feature_extractor_model)
+        # from sklearn.metrics import accuracy_score,confusion_matrix
+        # print(pred_labels)
+        # #pred_labels=pred_labels[pred_labels == 3] = 6
+        # for i in range(len(pred_labels)):
+        #     if pred_labels[i] not in y_test2:
+        #         if pred_labels[i] < 4:
+        #             pred_labels[i] = np.max(y_test2)
+        #         else:
+        #             pred_labels[i]=np.min(y_test2)
+        # print(len(np.unique(pred_labels)))
+        # print(y_test2)
+        # print(len(np.unique(y_test2)))
+        # score=accuracy_score(y_test2,pred_labels)
+        # cm= confusion_matrix(y_test2,pred_labels)
+        # print(cm)
+        # PN2=[]
+        # for item in pname2:
+        #     if item not in PN2:
+        #         PN2.append(item)
+        # print(PN2)
+        # utils.plot_confusion_matrix(cm,PN2,'Second dataset')
+        #
+        #
+        # print(score)
+    PN4=[]
+    for item in pname4:
         if item not in PN4:
             PN4.append(item)
-    # print(PN4)
-    utils.plot_confusion_matrix(cm,PN4,'Svm c8 dataset')
-    scores= utils.printScore(y_pre, y_test5)
-    print(scores)
-    utils.plot_confusion_matrix(cmknn, PN4, 'Knn c8 dataset')
-    scores = utils.printScore(y_preKnn, y_test5)
-    print(scores)
-    # updated_prototypes = update_prototypes(previous_prototypes, new_prototypes)
-    #
-    # # 保存更新后的类原型
-    # save_prototypes(updated_prototypes, protoName)
-    #
-    # # 假设我们有新的查询集数据new_query_set
-    # # new_query_set = np.random.rand(75, 100, 1)  # 示例查询集数据
-    #
-    # # 对新的查询集进行分类
-    # pred_labels = classify_query_samples(x_test2, updated_prototypes, feature_extractor_model)
-    # from sklearn.metrics import accuracy_score,confusion_matrix
-    # print(pred_labels)
-    # #pred_labels=pred_labels[pred_labels == 3] = 6
-    # for i in range(len(pred_labels)):
-    #     if pred_labels[i] not in y_test2:
-    #         if pred_labels[i] < 4:
-    #             pred_labels[i] = np.max(y_test2)
-    #         else:
-    #             pred_labels[i]=np.min(y_test2)
-    # print(len(np.unique(pred_labels)))
-    # print(y_test2)
-    # print(len(np.unique(y_test2)))
-    # score=accuracy_score(y_test2,pred_labels)
-    # cm= confusion_matrix(y_test2,pred_labels)
-    # print(cm)
-    # PN2=[]
-    # for item in pname2:
-    #     if item not in PN2:
-    #         PN2.append(item)
-    # print(PN2)
-    # utils.plot_confusion_matrix(cm,PN2,'Second dataset')
-    #
-    #
-    # print(score)
 
+    PN5=[]
+    for item in pname5:
+        if item not in PN5:
+            PN5.append(item)
+
+    print('am c4',scorec4amTotal / m)
+    print('am c8',scorec8amTotal / m)
+    print('svm c8',scoreSvmTotal/m)
+    print('knn c8',scoreKNNTotal / m)
+    # maxnumber.append(sum(scoreTotal / m) )
+    #
+    cmTotal = cmTotal / m
+    print(cmTotal / m)
+    print('am c4',cmc4AMTotal/m)
+    print('am c8',cmc8AMTotal/m)
+    print('svm c8',cmSVMTotal/m)
+    print('knn c8',cmKNNTotal / m)
+
+
+    plt.clf()
+    # utils.plot_confusion_matrix(cmTotal, PN, 'FRDA SVM')
+    utils.plot_confusion_matrix(cmc4AMTotal/m,PN4, 'c4 - adapted Mahalanobis')
+
+    plt.clf()
+    # utils.plot_confusion_matrix(cmTotal, PN, 'FRDA SVM')
+    utils.plot_confusion_matrix(cmc8AMTotal / m, PN5, 'c5 - adapted Mahalanobis')
+
+    plt.clf()
+    # utils.plot_confusion_matrix(cmTotal, PN, 'FRDA SVM')
+    utils.plot_confusion_matrix(cmSVMTotal / m, PN5, 'c5 - SVM')
+
+    plt.clf()
+    # utils.plot_confusion_matrix(cmTotal, PN, 'FRDA SVM')
+    utils.plot_confusion_matrix(cmKNNTotal / m, PN5, 'c5 - KNN')
