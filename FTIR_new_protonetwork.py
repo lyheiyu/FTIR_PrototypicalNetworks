@@ -13,6 +13,10 @@ from utils import utils
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from typing import Union as U, Tuple as T
+from FTIR_ReaddataFrom500C4 import readFromPlastics500
+from utils import utils
+
+from sklearn.model_selection import train_test_split
 # =========================
 # 1) Encoder（1D 光谱，L2 归一化）
 # =========================
@@ -386,10 +390,7 @@ def emsc(spectra: np.ndarray, wavenumbers: np.ndarray, order: int = 2,
         return preprocessed_spectra, coefs.T
 
     return preprocessed_spectra
-from FTIR_ReaddataFrom500C4 import readFromPlastics500
-from utils import utils
 
-from sklearn.model_selection import train_test_split
 def get_data():
     polymerName, waveLength, intensity, polymerID, x_each, y_each = utils.parseData11('dataset/D4_4_publication11.csv',
                                                                                       2, 1763)
@@ -601,7 +602,7 @@ def main():
 
 
 if __name__ == "__main__":
-    # TensorFlow 小设置（可选）
+    # TensorFlow
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
         try:
