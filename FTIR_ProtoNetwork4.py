@@ -373,6 +373,65 @@ def make_episode(X, y, N=11, K=1, Q=5, rng=None):
 # ==============
 # 3) 各种“原型/协方差/距离”构建
 # ==============
+from FTIR_fewShot_Learning import emsc,EMSA
+import matplotlib.pyplot as plt
+def dataAugmenation(intensity,polymerID,waveLength,pName,randomSeed):
+    x_train, x_test, y_train, y_test = train_test_split(intensity, polymerID, test_size=0.7, random_state=randomSeed)
+    waveLength = np.array(waveLength, dtype=np.float)
+    datas = []
+    datas2 = []
+    PN = []
+    for item in pName:
+        if item not in PN:
+            PN.append(item)
+    polymerMID=[]
+    for item in polymerMID:
+        if item not in PN:
+            polymerMID.append(item)
+
+    for n in range(len(PN)):
+        numSynth = 2
+        indicesPS = [l for l, id in enumerate(y_train) if id == n]
+        intensityForLoop = x_train[indicesPS]
+        datas.append(intensityForLoop)
+        datas2.append(intensityForLoop)
+    for itr in range(0, len(PN)):
+        _, coefs_ = emsc(
+            datas[itr], waveLength, reference=None,
+            order=2,
+            return_coefs=True)
+
+        coefs_std = coefs_.std(axis=0)
+        indicesPS = [l for l, id in enumerate(y_train) if id == itr]
+        label = y_train[indicesPS]
+        reference = datas[itr].mean(axis=0)
+        emsa = EMSA(coefs_std, waveLength, reference, order=2)
+
+        generator = emsa.generator(datas[itr], label,
+                                   equalize_subsampling=False, shuffle=False,
+                                   batch_size=200)
+
+        augmentedSpectrum = []
+        for i, batch in enumerate(generator):
+            if i > 2:
+                break
+            augmented = []
+            for augmented_spectrum, label in zip(*batch):
+                plt.plot(waveLength, augmented_spectrum, label=label)
+                augmented.append(augmented_spectrum)
+            augmentedSpectrum.append(augmented)
+            # plt.gca().invert_xaxis()
+            # plt.legend()
+            # plt.show()
+        augmentedSpectrum = np.array(augmentedSpectrum)
+        y_add = []
+        for item in augmentedSpectrum[0]:
+            y_add.append(itr)
+        from sklearn.preprocessing import normalize
+        augmentedSpectrum[0] = normalize(augmentedSpectrum[0], 'max')
+        x_train = np.concatenate((x_train, augmentedSpectrum[0]), axis=0)
+        y_train = np.concatenate((y_train, y_add), axis=0)
+    return x_train,y_train,x_test,y_test
 
 def build_prototypes(emb_s, Sy, N):
     """每类均值（原型） [N, D]"""
@@ -695,6 +754,103 @@ def predict_episode(encoder: Model, Sx, Sy, Qx, classes, distance='euclid', eps=
 
     pred_idx = np.argmin(d2, axis=1)
     return classes[pred_idx]
+import numpy as np
+
+def split_support_query_all(X, y, n_way, k_shot, seed=0):
+    rng = np.random.default_rng(seed)
+
+    y = np.asarray(y)
+    X = np.asarray(X)
+
+    classes_all = np.unique(y)
+    chosen = rng.choice(classes_all, size=n_way, replace=False)
+
+    S_idx, Q_idx = [], []
+    for c in chosen:
+        idx = np.where(y == c)[0]
+        rng.shuffle(idx)
+        if len(idx) < k_shot + 1:
+            raise ValueError(f"Class {c} has only {len(idx)} samples, need >= {k_shot+1}.")
+        S_idx.extend(idx[:k_shot])
+        Q_idx.extend(idx[k_shot:])  # all remaining
+
+    S_idx = np.array(S_idx, dtype=int)
+    Q_idx = np.array(Q_idx, dtype=int)
+
+    Sx, Sy = X[S_idx], y[S_idx]
+    Qx, Qy = X[Q_idx], y[Q_idx]
+    return Sx, Sy, Qx, Qy, chosen
+def class_stats_full_maha(emb_S, y_S, classes, reg=1e-3):
+    """
+    emb_S: [num_support, D]
+    y_S: labels (original labels)
+    classes: array of chosen class labels (original labels)
+    returns:
+      protos: [N, D]
+      inv_covs: [N, D, D]
+    """
+    D = emb_S.shape[1]
+    protos = []
+    inv_covs = []
+
+    for c in classes:
+        Ec = emb_S[y_S == c]  # [K, D]
+        mu = Ec.mean(axis=0)
+        protos.append(mu)
+
+        Xc = Ec - mu
+        # sample covariance (use K, not K-1, consistent with many implementations)
+        cov = (Xc.T @ Xc) / max(len(Ec), 1)
+
+        # regularize to ensure invertible
+        cov = cov + reg * np.eye(D)
+
+        inv = np.linalg.inv(cov)
+        inv_covs.append(inv)
+
+    return np.stack(protos, axis=0), np.stack(inv_covs, axis=0)
+def maha_full_predict_all(emb_Q, protos, inv_covs, classes):
+    """
+    emb_Q: [M, D]
+    protos: [N, D]
+    inv_covs: [N, D, D]
+    classes: [N] original labels
+    returns predicted labels of shape [M]
+    """
+    M, D = emb_Q.shape
+    N = protos.shape[0]
+
+    # distances: [M, N]
+    dists = np.zeros((M, N), dtype=np.float64)
+
+    for i in range(N):
+        diff = emb_Q - protos[i]  # [M, D]
+        # compute row-wise quadratic form: diff @ inv @ diff^T
+        # result: [M]
+        d = np.einsum("md,dd,md->m", diff, inv_covs[i], diff)
+        dists[:, i] = d
+
+    # smaller distance is better
+    pred_idx = np.argmin(dists, axis=1)
+    return classes[pred_idx]
+
+def fewshot_eval_all_remaining(encoder, X, y, n_way, k_shot, seed=0, reg=1e-3):
+    Sx, Sy, Qx, Qy, classes = split_support_query_all(X, y, n_way, k_shot, seed=seed)
+
+    emb_S = encoder(Sx)
+    emb_Q = encoder(Qx)
+
+    # === 关键修复：Tensor -> NumPy ===
+    if hasattr(emb_S, "numpy"):
+        emb_S = emb_S.numpy()
+    if hasattr(emb_Q, "numpy"):
+        emb_Q = emb_Q.numpy()
+
+    protos, inv_covs = class_stats_full_maha(emb_S, Sy, classes, reg=reg)
+    pred = maha_full_predict_all(emb_Q, protos, inv_covs, classes)
+
+    acc = (pred == Qy).mean()
+    return acc, pred, Qy, classes
 
 
 # ==============
@@ -708,15 +864,15 @@ def main():
     firstData, secondData, thirdData, pid1, pid2, pid3, pname1, pname2, pname3, wavenumber = get_data()
     w5, X5, y5, p5 = readFromPlastics500('dataset/FTIR_PLastics500_c8.csv')
     w4, X4, y4, p4 = readFromPlastics500('dataset/FTIR_PLastics500_c4.csv')
-
+    x_train1, y_train1, x_test1, y_test1 = dataAugmenation(firstData, pid1, wavenumber, pname1, 1)
     # 若你已经做了插值/EMSC/EMSA统一到同一波数轴，这里直接使用处理后的 X5/X4
     # 归一化（与训练/测试保持一致；如果你有固定策略，请保持一致）
-    # X_src, y_src = X5, y5
-    X_src, y_src = firstData, pid1
+    X_src, y_src = X5, y5
+    # X_src, y_src = x_train1, y_train1
     X_tgt, y_tgt = X4, y4
 
     # 切分源域 train/val
-    X_tr, X_val, y_tr, y_val = train_test_split(X_src, y_src, test_size=0.1, random_state=2, stratify=y_src)
+    X_tr, X_val, y_tr, y_val = train_test_split(X_src, y_src, test_size=0.3, random_state=2, stratify=y_src)
 
     # ====== 构建 encoder ======
     encoder = make_encoder(input_len=X_src.shape[1], emb_dim=128)
@@ -726,8 +882,8 @@ def main():
 
     # ====== episodic 训练（在源域）======
     encoder = train_protonet(
-        encoder, X_tr, y_tr, X_val, y_val,
-        steps=500, N=11, K=5, Q=5, lr=1e-3, seed=0,
+        encoder,  X_tr, X_val, y_tr, y_val ,
+        steps=100, N=11, K=5, Q=20, lr=1e-3, seed=0,
         val_every=100, val_episodes=30, distance=distance
     )
 
@@ -740,10 +896,21 @@ def main():
     print(f"[跨域 episodic acc] {acc_cross:.4f}")
 
     # ====== 单 episode 推理示例 ======
-    Sx, Sy, Qx, Qy, classes = make_episode(X_tgt, y_tgt, N=6, K=5, Q=10, rng=np.random.default_rng(3))
+    Sx, Sy, Qx, Qy, classes = make_episode(X_tgt, y_tgt, N=6, K=5, Q=15, rng=np.random.default_rng(3))
     pred = predict_episode(encoder, Sx, Sy, Qx, classes, distance=distance)
     true_labels = classes[Qy]
     print(f"[单 episode acc] {(pred == true_labels).mean():.4f} ({distance})")
+    # After training encoder on source domain:
+    acc_all, pred_all, true_all, used_classes = fewshot_eval_all_remaining(
+        encoder,
+        X_tgt, y_tgt,
+        n_way=6,
+        k_shot=5,
+        seed=3,
+        reg=1e-3
+    )
+    print(f"[Target domain | support 5-shot | query = all remaining] acc={acc_all:.4f}, classes={used_classes}")
+    print(f"Query size = {len(true_all)}")
 
 
 if __name__ == "__main__":
