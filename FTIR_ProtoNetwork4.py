@@ -281,51 +281,99 @@ np.random.seed(42)
 # ==============
 # 1) Encoder（1D 光谱，输出 L2 归一化 embedding）
 # ==============
-def make_encoder(input_len: int, emb_dim: int = 128) -> Model:
+# def make_encoder(input_len: int, emb_dim: int = 128) -> Model:
+#     inp = layers.Input(shape=(input_len,))
+#     x = layers.Reshape((input_len, 1))(inp)
+#     # 轻量 1D CNN backbone
+#     for f, k in [(64, 9), (64, 9), (128, 7), (128, 7)]:
+#         x = layers.Conv1D(f, k, padding="same", use_bias=False)(x)
+#         x = layers.BatchNormalization()(x)
+#         x = layers.ReLU()(x)
+#         x = layers.MaxPool1D(2)(x)
+#     x = layers.GlobalAveragePooling1D()(x)
+#     x = layers.Dense(emb_dim, use_bias=False)(x)
+#     # x = tf.nn.l2_normalize(x, axis=-1)  # L2 normalize
+#     return Model(inp, x, name="encoder")
+def make_encoder(input_len: int, emb_dim: int = 128, dropout: float = 0.1) -> Model:
     inp = layers.Input(shape=(input_len,))
     x = layers.Reshape((input_len, 1))(inp)
-    # 轻量 1D CNN backbone
-    for f, k in [(64, 9), (64, 9), (128, 7), (128, 7)]:
+
+    # keep your backbone, but reduce pooling a bit
+    cfg = [(64, 9, True), (64, 9, True), (128, 7, False), (128, 7, False)]
+    for f, k, do_pool in cfg:
         x = layers.Conv1D(f, k, padding="same", use_bias=False)(x)
         x = layers.BatchNormalization()(x)
         x = layers.ReLU()(x)
-        x = layers.MaxPool1D(2)(x)
-    x = layers.GlobalAveragePooling1D()(x)
-    x = layers.Dense(emb_dim, use_bias=False)(x)
-    # x = tf.nn.l2_normalize(x, axis=-1)  # L2 normalize
-    return Model(inp, x, name="encoder")
+        if do_pool:
+            x = layers.MaxPool1D(2)(x)
 
+    x = layers.GlobalAveragePooling1D()(x)
+
+    if dropout and dropout > 0:
+        x = layers.Dropout(dropout)(x)
+
+    x = layers.Dense(emb_dim, use_bias=False)(x)
+    x = layers.BatchNormalization()(x)
+    x = tf.nn.l2_normalize(x, axis=-1)
+
+    return Model(inp, x, name="encoder_cnn")
 
 # ==============
 # 2) 采样一个 episode（N way, K shot, Q query）
 #    返回支持集/查询集 + 0..N-1 的内部标签 + 原始类ID映射
 # ==============
+import numpy as np
+
 def make_episode(X, y, N=11, K=1, Q=5, rng=None):
+    """
+    Safe episodic sampler:
+    - Only sample from classes that have at least (K+Q) samples
+    - Remap episode labels to 0..N-1 (Sy/Qy)
+    - Raises a clear error if not enough eligible classes
+    """
     if rng is None:
         rng = np.random.default_rng()
 
-    uniq = np.unique(y)
-    min_needed = K + Q
-    eligible = [c for c in uniq if np.sum(y == c) >= min_needed]
+    X = np.asarray(X)
+    y = np.asarray(y)
 
-    # If you insist on N=11, you must have 11 eligible classes
-    assert len(eligible) >= N, (
-        f"Eligible classes不足：{len(eligible)} < N={N} "
-        f"(need >=K+Q={min_needed} per class). "
-        f"Try smaller Q/K or smaller val split."
-    )
+    min_needed = K + Q
+    uniq, cnt = np.unique(y, return_counts=True)
+
+    eligible = uniq[cnt >= min_needed]
+    if len(eligible) < N:
+        # build a helpful message
+        counts_dict = dict(zip(uniq.tolist(), cnt.tolist()))
+        raise ValueError(
+            f"Not enough eligible classes for an episode: need N={N}, "
+            f"but only {len(eligible)} classes have >= {min_needed} samples (K+Q).\n"
+            f"Per-class counts: {counts_dict}\n"
+            f"Fix: reduce Q/K, reduce N, or increase samples per class."
+        )
 
     classes = rng.choice(eligible, size=N, replace=False)
 
-    Sx, Sy, Qx, Qy = [], [], [], []
+    Sx_list, Qx_list = [], []
+    Sy_list, Qy_list = [], []
+
     for j, c in enumerate(classes):
         idx = np.where(y == c)[0]
         idx = rng.permutation(idx)
-        s, q = idx[:K], idx[K:K+Q]
-        Sx.append(X[s]); Qx.append(X[q])
-        Sy.extend([j]*K); Qy.extend([j]*Q)
 
-    return np.concatenate(Sx), np.asarray(Sy, np.int32), np.concatenate(Qx), np.asarray(Qy, np.int32), classes
+        s = idx[:K]
+        q = idx[K:K+Q]
+
+        Sx_list.append(X[s])
+        Qx_list.append(X[q])
+        Sy_list.append(np.full(K, j, dtype=np.int32))
+        Qy_list.append(np.full(Q, j, dtype=np.int32))
+
+    Sx = np.concatenate(Sx_list, axis=0)
+    Qx = np.concatenate(Qx_list, axis=0)
+    Sy = np.concatenate(Sy_list, axis=0)
+    Qy = np.concatenate(Qy_list, axis=0)
+
+    return Sx, Sy, Qx, Qy, classes
 
 # def make_episode(X, y, N=5, K=5, Q=15, rng=None):
 #     if rng is None:
@@ -457,34 +505,56 @@ def class_stats_diag(emb_s, Sy, N, eps=1e-3):
     var = var_sum / tf.maximum(cnt, 1.0)                          # [N, D]
     invvar = 1.0 / (var + eps)
     return mu, invvar
-
-def class_stats_full(emb_s, Sy, N, eps=1e-3):
-    """
-    每类完整协方差（返回协方差逆）
-    emb_s: [NK, D]
-    Sy:    [NK]
-    返回:
-      mu:      [N, D]
-      inv_cov: [N, D, D]
-    """
+def class_stats_full(emb_s, Sy, N, eps=1e-2):
     Sy = tf.cast(Sy, tf.int32)
     N  = tf.cast(N,  tf.int32)
+
     mu = tf.math.unsorted_segment_mean(emb_s, Sy, num_segments=N)  # [N,D]
     D  = tf.shape(emb_s)[1]
 
-    mu_per_sample = tf.gather(mu, Sy)             # [NK, D]
-    xc = emb_s - mu_per_sample                    # [NK, D]
-    outer = tf.einsum('bi,bj->bij', xc, xc)       # [NK, D, D]
-    cov_sum = tf.math.unsorted_segment_sum(outer, Sy, num_segments=N)  # [N, D, D]
+    mu_per_sample = tf.gather(mu, Sy)         # [NK,D]
+    xc = emb_s - mu_per_sample                # [NK,D]
+    outer = tf.einsum('bi,bj->bij', xc, xc)   # [NK,D,D]
+    cov_sum = tf.math.unsorted_segment_sum(outer, Sy, num_segments=N)  # [N,D,D]
 
-    ones = tf.ones((tf.shape(emb_s)[0], 1), dtype=emb_s.dtype)
-    cnt  = tf.math.unsorted_segment_sum(ones, Sy, num_segments=N)[:, 0]  # [N]
-    cnt  = tf.maximum(cnt, 1.0)
-    cov  = cov_sum / tf.reshape(cnt, [-1, 1, 1])  # [N, D, D]
+    cnt = tf.math.unsorted_segment_sum(
+        tf.ones((tf.shape(emb_s)[0],), dtype=emb_s.dtype), Sy, num_segments=N
+    )  # [N]
+
+    den = tf.maximum(cnt - 1.0, 1.0)          # unbiased, avoid /0
+    cov = cov_sum / den[:, None, None]        # [N,D,D]
 
     I = tf.eye(D, dtype=emb_s.dtype)[None, :, :]
-    inv_cov = tf.linalg.inv(cov + eps * I)        # [N, D, D]
+    inv_cov = tf.linalg.inv(cov + eps * I)
     return mu, inv_cov
+
+# def class_stats_full(emb_s, Sy, N, eps=1e-3):
+#     """
+#     每类完整协方差（返回协方差逆）
+#     emb_s: [NK, D]
+#     Sy:    [NK]
+#     返回:
+#       mu:      [N, D]
+#       inv_cov: [N, D, D]
+#     """
+#     Sy = tf.cast(Sy, tf.int32)
+#     N  = tf.cast(N,  tf.int32)
+#     mu = tf.math.unsorted_segment_mean(emb_s, Sy, num_segments=N)  # [N,D]
+#     D  = tf.shape(emb_s)[1]
+#
+#     mu_per_sample = tf.gather(mu, Sy)             # [NK, D]
+#     xc = emb_s - mu_per_sample                    # [NK, D]
+#     outer = tf.einsum('bi,bj->bij', xc, xc)       # [NK, D, D]
+#     cov_sum = tf.math.unsorted_segment_sum(outer, Sy, num_segments=N)  # [N, D, D]
+#
+#     ones = tf.ones((tf.shape(emb_s)[0], 1), dtype=emb_s.dtype)
+#     cnt  = tf.math.unsorted_segment_sum(ones, Sy, num_segments=N)[:, 0]  # [N]
+#     cnt  = tf.maximum(cnt, 1.0)
+#     cov  = cov_sum / tf.reshape(cnt, [-1, 1, 1])  # [N, D, D]
+#
+#     I = tf.eye(D, dtype=emb_s.dtype)[None, :, :]
+#     inv_cov = tf.linalg.inv(cov + eps * I)        # [N, D, D]
+#     return mu, inv_cov
 
 def dists_euclid(emb_q, protos):
     """欧氏距离平方 [BQ, N]"""
@@ -504,7 +574,13 @@ def dists_maha_full(emb_q, mu, inv_cov):
     Av  = tf.einsum('ndd,bnd->bnd', inv_cov, diff)               # [BQ,N,D]
     d2  = tf.reduce_sum(diff * Av, axis=-1)                      # [BQ,N]
     return d2
-
+def maha_distance_full(emb_q, mu, inv_cov):
+    # emb_q: [Q, D], mu: [N, D], inv_cov: [N, D, D]
+    diff = emb_q[:, None, :] - mu[None, :, :]            # [Q, N, D]
+    # (Q,N,D) * (N,D,D) -> (Q,N,D)
+    mid = tf.einsum('qnd,ndk->qnk', diff, inv_cov)
+    d2  = tf.einsum('qnd,qnd->qn', mid, diff)            # [Q, N]
+    return d2
 
 # ==============
 # 4) 原型网络的 loss + acc（支持三种距离）
@@ -528,7 +604,8 @@ def prototypical_loss_and_acc(encoder, Sx, Sy, Qx, Qy, distance='euclid'):
         d2 = dists_maha_diag(emb_q, mu, invvar)                  # [BQ,N]
     elif distance == 'maha_full':
         mu, inv_cov = class_stats_full(emb_s, Sy, N)             # [N,D], [N,D,D]
-        d2 = dists_maha_full(emb_q, mu, inv_cov)                 # [BQ,N]
+        # d2 = dists_maha_full(emb_q, mu, inv_cov)
+        d2 = maha_distance_full(emb_q, mu, inv_cov)
     else:
         raise ValueError("distance must be one of: 'euclid', 'maha_diag', 'maha_full'")
 
@@ -605,34 +682,137 @@ def num_eligible_classes(y, min_needed):
 #     encoder.set_weights(best_weights)
 #     print(f"Loaded best encoder (val_acc={best_val:.3f})")
 #     return encoder
-def train_protonet(encoder: Model, X_tr, y_tr, X_val=None, y_val=None,
-                   steps=2000, N=5, K=5, Q=3, lr=1e-3, seed=0,
-                   val_every=100, val_episodes=50, distance='euclid'):
+# def train_protonet(encoder: Model, X_tr, y_tr, X_val=None, y_val=None,
+#                    steps=2000, N=5, K=5, Q=3, lr=1e-3, seed=0,
+#                    val_every=100, val_episodes=50, distance='euclid'):
+#     rng = np.random.default_rng(seed)
+#     opt = tf.keras.optimizers.Adam(lr)
+#
+#     best_val = -1.0
+#     best_weights = encoder.get_weights()
+#
+#     @tf.function
+#     def _train_step(Sx, Sy, Qx, Qy):
+#         with tf.GradientTape() as tape:
+#             loss, acc = prototypical_loss_and_acc(encoder, Sx, Sy, Qx, Qy, distance=distance)
+#         grads = tape.gradient(loss, encoder.trainable_variables)
+#         opt.apply_gradients(zip(grads, encoder.trainable_variables))
+#         return loss, acc
+#
+#     # Evaluation: run encoder in inference mode (BatchNorm stable)
+#     @tf.function
+#     def _eval_episode(Sx, Sy, Qx, Qy):
+#         Sx = tf.cast(Sx, tf.float32)
+#         Qx = tf.cast(Qx, tf.float32)
+#         Sy = tf.cast(Sy, tf.int32)
+#         Qy = tf.cast(Qy, tf.int32)
+#
+#         emb_s = encoder(Sx, training=False)
+#         emb_q = encoder(Qx, training=False)
+#         N_eff = tf.reduce_max(Sy) + 1
+#
+#         if distance == 'euclid':
+#             protos = build_prototypes(emb_s, Sy, N_eff)
+#             d2 = dists_euclid(emb_q, protos)
+#         elif distance == 'maha_diag':
+#             mu, invvar = class_stats_diag(emb_s, Sy, N_eff)
+#             d2 = dists_maha_diag(emb_q, mu, invvar)
+#         elif distance == 'maha_full':
+#             mu, inv_cov = class_stats_full(emb_s, Sy, N_eff)
+#             d2 = dists_maha_full(emb_q, mu, inv_cov)
+#         else:
+#             raise ValueError("distance must be one of: 'euclid', 'maha_diag', 'maha_full'")
+#
+#         logits = -d2
+#         pred = tf.argmax(logits, axis=-1, output_type=Qy.dtype)
+#         acc = tf.reduce_mean(tf.cast(tf.equal(pred, Qy), tf.float32))
+#         return acc
+#
+#     for t in range(1, steps + 1):
+#         Sx, Sy, Qx, Qy, _ = make_episode(X_tr, y_tr, N, K, Q, rng)
+#         loss, acc = _train_step(Sx, Sy, Qx, Qy)
+#
+#         if t % val_every == 0:
+#             min_needed = K + Q
+#
+#             # decide pool
+#             use_train_fallback = False
+#             if (X_val is None) or (y_val is None):
+#                 use_train_fallback = True
+#             else:
+#                 elig_val = num_eligible_classes(y_val, min_needed)
+#                 if elig_val < N:
+#                     use_train_fallback = True
+#
+#             X_eval, y_eval = (X_tr, y_tr) if use_train_fallback else (X_val, y_val)
+#             tag = "train-fallback" if use_train_fallback else "val"
+#
+#             accs = []
+#             for _ in range(val_episodes):
+#                 Sxv, Syv, Qxv, Qyv, _ = make_episode(X_eval, y_eval, N=N, K=K, Q=Q, rng=rng)
+#                 accv = _eval_episode(Sxv, Syv, Qxv, Qyv)
+#                 accs.append(float(accv.numpy()))
+#
+#             val_acc = float(np.mean(accs))
+#
+#             # update best ONLY when this is real validation
+#             if val_acc > best_val:
+#                 best_val = val_acc
+#                 best_weights = encoder.get_weights()
+#
+#             print(f"[{tag}] step {t}: train_acc={float(acc):.3f}, eval_acc={val_acc:.4f} (need per class={min_needed})")
+#
+#     encoder.set_weights(best_weights)
+#     print(f"Loaded best encoder (best_val_acc={best_val:.3f})")
+#     return encoder
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras import Model
+import time
+
+def train_protonet(
+    encoder: Model, X_tr, y_tr, X_val=None, y_val=None,
+    steps=2000, N=5, K=5, Q=3, lr=1e-3, seed=0,
+    val_every=100, val_episodes=50, distance='euclid'
+):
     rng = np.random.default_rng(seed)
     opt = tf.keras.optimizers.Adam(lr)
 
     best_val = -1.0
     best_weights = encoder.get_weights()
 
-    @tf.function
+    def _remap_episode_labels(Sy, Qy):
+        Sy = np.asarray(Sy)
+        Qy = np.asarray(Qy)
+        classes = np.unique(Sy)
+        mapping = {c: i for i, c in enumerate(classes)}
+        Sy_new = np.vectorize(mapping.get)(Sy).astype(np.int32)
+        Qy_new = np.vectorize(mapping.get)(Qy).astype(np.int32)
+        return Sy_new, Qy_new
+
+    # --- eager train step (no tf.function) ---
     def _train_step(Sx, Sy, Qx, Qy):
+        Sx = tf.convert_to_tensor(Sx, dtype=tf.float32)
+        Qx = tf.convert_to_tensor(Qx, dtype=tf.float32)
+        Sy = tf.convert_to_tensor(Sy, dtype=tf.int32)
+        Qy = tf.convert_to_tensor(Qy, dtype=tf.int32)
+
         with tf.GradientTape() as tape:
             loss, acc = prototypical_loss_and_acc(encoder, Sx, Sy, Qx, Qy, distance=distance)
         grads = tape.gradient(loss, encoder.trainable_variables)
         opt.apply_gradients(zip(grads, encoder.trainable_variables))
-        return loss, acc
+        return float(loss.numpy()), float(acc.numpy())
 
-    # Evaluation: run encoder in inference mode (BatchNorm stable)
-    @tf.function
     def _eval_episode(Sx, Sy, Qx, Qy):
-        Sx = tf.cast(Sx, tf.float32)
-        Qx = tf.cast(Qx, tf.float32)
-        Sy = tf.cast(Sy, tf.int32)
-        Qy = tf.cast(Qy, tf.int32)
+        Sx = tf.convert_to_tensor(Sx, dtype=tf.float32)
+        Qx = tf.convert_to_tensor(Qx, dtype=tf.float32)
+        Sy = tf.convert_to_tensor(Sy, dtype=tf.int32)
+        Qy = tf.convert_to_tensor(Qy, dtype=tf.int32)
 
         emb_s = encoder(Sx, training=False)
         emb_q = encoder(Qx, training=False)
-        N_eff = tf.reduce_max(Sy) + 1
+        N_eff = tf.reduce_max(Sy) + 1  # safe because we remap
 
         if distance == 'euclid':
             protos = build_prototypes(emb_s, Sy, N_eff)
@@ -646,19 +826,23 @@ def train_protonet(encoder: Model, X_tr, y_tr, X_val=None, y_val=None,
         else:
             raise ValueError("distance must be one of: 'euclid', 'maha_diag', 'maha_full'")
 
-        logits = -d2
-        pred = tf.argmax(logits, axis=-1, output_type=Qy.dtype)
+        pred = tf.argmax(-d2, axis=-1, output_type=Qy.dtype)
         acc = tf.reduce_mean(tf.cast(tf.equal(pred, Qy), tf.float32))
-        return acc
+        return float(acc.numpy())
 
     for t in range(1, steps + 1):
+        t0 = time.time()
+        # print(f"[step {t}] sampling episode...", flush=True)
         Sx, Sy, Qx, Qy, _ = make_episode(X_tr, y_tr, N, K, Q, rng)
+        # print(f"[step {t}] sampled. remapping labels...", flush=True)
+        Sy, Qy = _remap_episode_labels(Sy, Qy)
+
+        # print(f"[step {t}] train_step running...", flush=True)
         loss, acc = _train_step(Sx, Sy, Qx, Qy)
+        # print(f"[step {t}] done. loss={loss:.4f}, acc={acc:.4f}, dt={time.time()-t0:.2f}s", flush=True)
 
         if t % val_every == 0:
             min_needed = K + Q
-
-            # decide pool
             use_train_fallback = False
             if (X_val is None) or (y_val is None):
                 use_train_fallback = True
@@ -671,23 +855,26 @@ def train_protonet(encoder: Model, X_tr, y_tr, X_val=None, y_val=None,
             tag = "train-fallback" if use_train_fallback else "val"
 
             accs = []
-            for _ in range(val_episodes):
+            for i in range(val_episodes):
+                # print(f"  [{tag}] val episode {i+1}/{val_episodes} sampling...", flush=True)
                 Sxv, Syv, Qxv, Qyv, _ = make_episode(X_eval, y_eval, N=N, K=K, Q=Q, rng=rng)
+                Syv, Qyv = _remap_episode_labels(Syv, Qyv)
+
+                # print(f"  [{tag}] val episode {i+1}/{val_episodes} eval...", flush=True)
                 accv = _eval_episode(Sxv, Syv, Qxv, Qyv)
-                accs.append(float(accv.numpy()))
+                accs.append(accv)
 
             val_acc = float(np.mean(accs))
-
-            # update best ONLY when this is real validation
             if val_acc > best_val:
                 best_val = val_acc
                 best_weights = encoder.get_weights()
 
-            print(f"[{tag}] step {t}: train_acc={float(acc):.3f}, eval_acc={val_acc:.4f} (need per class={min_needed})")
+            print(f"[{tag}] step {t}: train_acc={acc:.3f}, eval_acc={val_acc:.4f} (need per class={min_needed})", flush=True)
 
-    encoder.set_weights(best_weights)
+    # encoder.set_weights(best_weights)
     print(f"Loaded best encoder (best_val_acc={best_val:.3f})")
     return encoder
+
 # def count_eligible(y, min_needed):
 #     uniq, cnt = np.unique(y, return_counts=True)
 #     return sum(cnt >= min_needed)
@@ -754,7 +941,7 @@ def predict_episode(encoder: Model, Sx, Sy, Qx, classes, distance='euclid', eps=
 
     pred_idx = np.argmin(d2, axis=1)
     return classes[pred_idx]
-import numpy as np
+
 
 def split_support_query_all(X, y, n_way, k_shot, seed=0):
     rng = np.random.default_rng(seed)
@@ -864,7 +1051,7 @@ def main():
     firstData, secondData, thirdData, pid1, pid2, pid3, pname1, pname2, pname3, wavenumber = get_data()
     w5, X5, y5, p5 = readFromPlastics500('dataset/FTIR_PLastics500_c8.csv')
     w4, X4, y4, p4 = readFromPlastics500('dataset/FTIR_PLastics500_c4.csv')
-    x_train1, y_train1, x_test1, y_test1 = dataAugmenation(firstData, pid1, wavenumber, pname1, 1)
+    # x_train1, y_train1, x_test1, y_test1 = dataAugmenation(firstData, pid1, wavenumber, pname1, 1)
     # 若你已经做了插值/EMSC/EMSA统一到同一波数轴，这里直接使用处理后的 X5/X4
     # 归一化（与训练/测试保持一致；如果你有固定策略，请保持一致）
     X_src, y_src = X5, y5
@@ -872,20 +1059,26 @@ def main():
     X_tgt, y_tgt = X4, y4
 
     # 切分源域 train/val
-    X_tr, X_val, y_tr, y_val = train_test_split(X_src, y_src, test_size=0.3, random_state=2, stratify=y_src)
+    X_tr, X_val, y_tr, y_val = train_test_split(X_src, y_src, test_size=0.5, random_state=2, stratify=y_src)
 
     # ====== 构建 encoder ======
     encoder = make_encoder(input_len=X_src.shape[1], emb_dim=128)
 
     # 选择距离：'euclid' / 'maha_diag' / 'maha_full'
     distance = 'maha_full'  # 你想要的“每类完整协方差马氏距离”
-
+    # distance = 'euclid'  # 你想要的“每类完整协方差马氏距离”
+    print(f"Using distance: {distance}")
     # ====== episodic 训练（在源域）======
+    print("X_tr:", X_tr.shape, "y_tr:", y_tr.shape, "unique y_tr:", len(np.unique(y_tr)))
+    print("X_val:", X_val.shape, "y_val:", y_val.shape, "unique y_val:", len(np.unique(y_val)))
+    CNumber= np.unique(y_tr)
+    Nl=len(CNumber)
     encoder = train_protonet(
-        encoder,  X_tr, X_val, y_tr, y_val ,
-        steps=100, N=11, K=5, Q=20, lr=1e-3, seed=0,
+        encoder,  X_tr, y_tr, X_val, y_val ,
+        steps=1000, N=Nl, K=5, Q=15, lr=1e-3, seed=0,
         val_every=100, val_episodes=30, distance=distance
     )
+    print('test')
 
     # ====== 源域 episodic 评测 ======
     # acc_in = episodic_eval(encoder, X_val, y_val, episodes=100, N=6, K=5, Q=15, seed=1, distance=distance)
