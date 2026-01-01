@@ -1075,7 +1075,7 @@ def main():
     Nl=len(CNumber)
     encoder = train_protonet(
         encoder,  X_tr, y_tr, X_val, y_val ,
-        steps=1000, N=Nl, K=5, Q=15, lr=1e-3, seed=0,
+        steps=2000, N=Nl, K=5, Q=15, lr=1e-3, seed=0,
         val_every=100, val_episodes=30, distance=distance
     )
     print('test')

@@ -56,7 +56,9 @@ def readFromPlastics500 (fileName):
         # "nearest","zero"为阶梯插值
         # slinear 线性插值
         # "quadratic","cubic" 为2阶、3阶B样条曲线插值
-        f = interpolate.interp1d(wavenumber, intensityNormalize, kind=kind)
+        # f = interpolate.interp1d(wavenumber[::-1], intensityNormalize[::-1], kind=kind)
+
+        f = interpolate.interp1d(wavenumber[::-1], intensityNormalize[:,::-1], kind=kind)
         # ‘slinear’, ‘quadratic’ and ‘cubic’ refer to a spline interpolation of first, second or third order)
         # f = interpolate.interp1d(waveLength, intensityDataset1, kind=kind)
         # f4 = interpolate.interp1d(waveLength4, intensityDataset4, kind=kind)
@@ -108,3 +110,9 @@ def readFromPlastics500 (fileName):
 # max_val = np.max(intensity)
 # normalized_intensity = (intensity - min_val) / (max_val - min_val)
 #
+if __name__ == '__main__':
+    fileName = 'dataset/FTIR_PLastics500_c4.csv'
+    xnewFinal,ynew,pid,Pname= readFromPlastics500(fileName)
+    for i in range(len(ynew)):
+        plt.plot(xnewFinal[::-1], ynew[i])
+    plt.show()
