@@ -1005,8 +1005,8 @@ if __name__ == '__main__':
         # new_prototypes,acc= perform_few_shot_learning(feature_extractor_model, x_train2, y_train2,
         #                                               n_way=4, k_shot=5, n_query=5,offset=len(previous_prototypes))
 
-        x_train4, x_test4, y_train4, y_test4 = train_test_split(forthData, pid4, test_size=0.3, random_state=i)
-        x_train5, x_test5, y_train5, y_test5 = train_test_split(fifthData, pid5, test_size=0.3, random_state=i)
+        x_train4, x_test4, y_train4, y_test4 = train_test_split(forthData, pid4, test_size=0.5, random_state=i)
+        x_train5, x_test5, y_train5, y_test5 = train_test_split(fifthData, pid5, test_size=0.5, random_state=i)
         # new_prototypes,acc= perform_few_shot_learning2(feature_extractor_model, x_train5, y_train5,
         #                                               n_way=6, k_shot=10, n_query=10)
         # 5th dataset

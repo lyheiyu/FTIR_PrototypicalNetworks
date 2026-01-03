@@ -13,12 +13,20 @@ def readFromPlastics500 (fileName):
 
     wavenumber=dataset.iloc[1,3:]
     intensity =dataset.iloc[2:,3:]
-    intensity= np.abs(intensity)
+    # intensity= np.abs(intensity)
     Pname= dataset.iloc[2:,1]
     pid= dataset.iloc[2:,2]
     maxVal= np.max(intensity)
+    intensity_np= np.array(intensity,dtype=np.float64)
+    row_max = intensity_np.max(axis=1, keepdims=True)
 
-    intensity = maxVal - intensity
+    # 反转
+    intensity_flipped = row_max - intensity_np
+    # intensity = maxVal - intensity
+    # for item in intensity:
+    #     for i in range(len(item)):
+    #         if item[i]<0:
+    #             item[i]=0
     wavenumber=np.array(wavenumber,dtype=np.float)
     intensity=np.array(intensity,dtype=np.float)
 
@@ -33,12 +41,14 @@ def readFromPlastics500 (fileName):
     # intensityBaseline=intensity
     intensityBaseline=[]
 
-    for item in intensity:
+    for item in intensity_flipped:
         item = item - airPLS(item)
 
         intensityBaseline.append(item)
     intensityForEach=[]
+    intensityBaseline = np.array(intensityBaseline)
 
+    # intensityForEach[intensityForEach < 0] = 0
     intensityNormalize=[]
     # max_val = max(intensityBaseline)
     # def normalize(data, method='max'):
@@ -47,7 +57,7 @@ def readFromPlastics500 (fileName):
     #         return data / max_val
 
     intensityNormalize = normalize(intensityBaseline, 'max')
-    intensityBaseline=np.array(intensityBaseline)
+    # intensityBaseline=np.array(intensityBaseline)
     intensityNormalize=np.array(intensityNormalize)
 
     xnewFinal = np.linspace(max(wavenumber), min(wavenumber), 2000)
