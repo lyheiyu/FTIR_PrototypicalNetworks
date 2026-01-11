@@ -946,7 +946,7 @@ if __name__ == '__main__':
     # # # prototyes=compute_prototypes(x_train1,y_train1,feature_extractor_model)
     # extrModelName='model/feature_extractor'+fileName+'_model.h5'
     # feature_extractor_model.save(extrModelName)
-    extrModelName='model/feature_extractor'+fileName+'_model.h5'
+    extrModelName='model/feature_extractor'+fileName+'_model2.h5'
     #extrModelName = 'feature_extractor_model.h5'
     feature_extractor_model = load_model(extrModelName)
     # prototyes = compute_prototypes(x_train1, y_train1, feature_extractor_model)
