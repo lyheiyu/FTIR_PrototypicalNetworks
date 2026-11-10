@@ -161,3 +161,33 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
+
+# Local editor settings and credentials
+.vscode/
+.env.*
+!.env.example
+
+# Generated experiment artifacts: publish reports, summary tables and figures only
+/results/**
+!/results/**/
+!/results/**/*.md
+!/results/**/*.png
+!/results/**/*.pdf
+!/results/**/summary*.csv
+!/results/**/*_summary.csv
+!/results/**/paired_differences.csv
+!/results/**/paired_deltas*.csv
+!/results/**/feature_geometry.csv
+!/results/**/spectral_fidelity.csv
+!/results/**/timing.csv
+!/results/**/cost_summary.csv
+!/results/**/training_comparison.csv
+!/results/**/full_class_mahalanobis_comparison.csv
+/results/**/*smoke*/
+/results/**/*check*/
+/results/research_cache/
+/results/**/source/
+
+# Redundant manuscript archive and Office temporary files
+/paper draft/*.zip
+~$*

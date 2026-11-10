@@ -1,1 +1,5 @@
 *.csv filter=lfs diff=lfs merge=lfs -text
+
+# Small published research tables use ordinary Git, not LFS.
+results/**/*.csv -filter -diff -merge text
+"paper draft/**/*.csv" -filter -diff -merge text

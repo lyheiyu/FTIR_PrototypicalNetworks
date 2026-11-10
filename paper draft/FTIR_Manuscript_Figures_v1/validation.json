@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "figure_pages": 54,
+  "figure_exports": 162,
+  "main": 12,
+  "supplementary": 6,
+  "CM_pages": 36,
+  "all_shot_CM_panels": 432,
+  "CM_rows_sum_to_100": true,
+  "all_input_hashes_unchanged": true,
+  "manuscript_rounding_issues": 3
+}

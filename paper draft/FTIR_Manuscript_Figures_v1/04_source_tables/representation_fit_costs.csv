@@ -1,0 +1,4 @@
+method,mean_seconds,scope
+CE M1 initial training,77.61576215000004,includes validation/checkpoint I/O; recorded CPU runs
+EP M1 initial training,71.93774496666667,includes validation/checkpoint I/O; recorded CPU runs
+PCA128 initial fit,0.11910006666666811,PCA fit only; no validation or neural training

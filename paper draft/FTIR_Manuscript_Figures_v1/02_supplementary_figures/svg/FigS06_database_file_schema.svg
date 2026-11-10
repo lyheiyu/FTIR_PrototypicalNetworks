@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="798.48pt" height="460.8pt" viewBox="0 0 798.48 460.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-22T15:35:33.224836</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.7.5, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 460.8 
+L 798.48 460.8 
+L 798.48 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 29.7324 185.16096 
+L 237.5316 185.16096 
+Q 249.2496 185.16096 249.2496 178.50816 
+L 249.2496 47.22624 
+Q 249.2496 40.57344 237.5316 40.57344 
+L 29.7324 40.57344 
+Q 18.0144 40.57344 18.0144 47.22624 
+L 18.0144 178.50816 
+Q 18.0144 185.16096 29.7324 185.16096 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #e8f1fa; stroke: #607080; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 303.1524 185.16096 
+L 495.3276 185.16096 
+Q 507.0456 185.16096 507.0456 178.50816 
+L 507.0456 47.22624 
+Q 507.0456 40.57344 495.3276 40.57344 
+L 303.1524 40.57344 
+Q 291.4344 40.57344 291.4344 47.22624 
+L 291.4344 178.50816 
+Q 291.4344 185.16096 303.1524 185.16096 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #fbede4; stroke: #607080; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 252.80982 112.8672 
+Q 270.338801 112.8672 286.526142 112.8672 
+" clip-path="url(#pb11b1229fe)" style="fill: none; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 281.726142 110.4672 
+L 286.526142 112.8672 
+L 281.726142 115.2672 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #435466; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 560.9484 185.16096 
+L 768.7476 185.16096 
+Q 780.4656 185.16096 780.4656 178.50816 
+L 780.4656 47.22624 
+Q 780.4656 40.57344 768.7476 40.57344 
+L 560.9484 40.57344 
+Q 549.2304 40.57344 549.2304 47.22624 
+L 549.2304 178.50816 
+Q 549.2304 185.16096 560.9484 185.16096 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #e8f5ed; stroke: #607080; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 510.60582 112.8672 
+Q 528.134801 112.8672 544.322142 112.8672 
+" clip-path="url(#pb11b1229fe)" style="fill: none; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 539.522142 110.4672 
+L 544.322142 112.8672 
+L 539.522142 115.2672 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #435466; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 29.7324 389.18016 
+L 237.5316 389.18016 
+Q 249.2496 389.18016 249.2496 382.52736 
+L 249.2496 268.98624 
+Q 249.2496 262.33344 237.5316 262.33344 
+L 29.7324 262.33344 
+Q 18.0144 262.33344 18.0144 268.98624 
+L 18.0144 382.52736 
+Q 18.0144 389.18016 29.7324 389.18016 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #f1ecf8; stroke: #607080; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 303.1524 389.18016 
+L 495.3276 389.18016 
+Q 507.0456 389.18016 507.0456 382.52736 
+L 507.0456 268.98624 
+Q 507.0456 262.33344 495.3276 262.33344 
+L 303.1524 262.33344 
+Q 291.4344 262.33344 291.4344 268.98624 
+L 291.4344 382.52736 
+Q 291.4344 389.18016 303.1524 389.18016 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #edf4fc; stroke: #607080; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 560.9484 389.18016 
+L 768.7476 389.18016 
+Q 780.4656 389.18016 780.4656 382.52736 
+L 780.4656 268.98624 
+Q 780.4656 262.33344 768.7476 262.33344 
+L 560.9484 262.33344 
+Q 549.2304 262.33344 549.2304 268.98624 
+L 549.2304 382.52736 
+Q 549.2304 389.18016 560.9484 389.18016 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #edf4fc; stroke: #607080; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 655.12031 186.608288 
+Q 528.138691 223.746998 402.444768 260.509092 
+" clip-path="url(#pb11b1229fe)" style="fill: none; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 407.72548 261.465168 
+L 402.444768 260.509092 
+L 406.378056 256.858168 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #435466; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 510.60582 325.7568 
+Q 528.134801 325.7568 544.322142 325.7568 
+" clip-path="url(#pb11b1229fe)" style="fill: none; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 539.522142 323.3568 
+L 544.322142 325.7568 
+L 539.522142 328.1568 
+z
+" clip-path="url(#pb11b1229fe)" style="fill: #435466; stroke: #435466; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="text_1">
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(56.233406 90.006778)">Spectral CSV (one file / resolution)</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(133.632 100.084809)"/>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(64.992234 110.162841)">Row 1: generic column indices</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(44.482781 120.240872)">Row 2: physical wavenumber metadata</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(42.443016 130.366153)">Rows 3+: ID | polymer | class ID | values</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(54.884813 140.694497)">C4: 3,736 values; C8: 1,869 values</text>
+   </g>
+   <g id="text_2">
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(336.437578 89.654934)">Duplicate row mapping CSV</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(399.24 99.732966)"/>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(338.459766 109.810997)">source_csv_row / source_id</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(340.607813 120.139341)">polymer / class_id / status</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(343.117266 130.467684)">retained_source_csv_row</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(356.924531 140.796028)">retained_source_id</text>
+   </g>
+   <g id="text_3">
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(589.349953 89.905247)">Paired group representatives CSV</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(664.848 99.983278)"/>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(636.5205 110.061309)">group / label</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(620.672062 120.139341)">c4_index / c8_index</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(605.876906 130.467684)">c4_id / c8_id / alias counts</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(588.979406 140.796028)">2,047 conservative record groups</text>
+   </g>
+   <g id="text_4">
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(93.166453 307.959019)">common_grid.npy</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(133.632 318.287362)"/>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(55.464891 328.365394)">1,868 explicit physical coordinates</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(71.677547 338.443425)">399.1927–4,000.6045 cm⁻¹</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(92.356453 348.521456)">Shared for C4 / C8</text>
+   </g>
+   <g id="text_5">
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(349.61625 308.084175)">split.json (task / seed)</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(399.24 318.162206)"/>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(332.709609 328.240237)">base train / validation / query</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(337.489453 338.318269)">novel support / query pools</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(336.770859 348.3963)">Roles shared across C4 / C8</text>
+   </g>
+   <g id="text_6">
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(604.746281 303.045159)">episodes.json (task / seed)</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(664.848 313.123191)"/>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(606.159562 323.201222)">20 base references / class</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(585.733078 333.279253)">Nested novel support order (K≤20)</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(600.147844 343.357284)">15 query groups / seen class</text>
+    <text style="font: 9px 'DejaVu Sans'" transform="translate(588.498469 353.435316)">200 matched evaluation episodes</text>
+   </g>
+   <g id="text_7">
+    <text style="font: 10px 'DejaVu Sans'; text-anchor: middle" x="399.24" y="436.6368" transform="rotate(-0 399.24 436.6368)">IDs, CSV row numbers and loaded-array indices are distinct; record groups are not verified specimen IDs.</text>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pb11b1229fe">
+   <rect x="8.64" y="8.64" width="781.2" height="443.52"/>
+  </clipPath>
+ </defs>
+</svg>

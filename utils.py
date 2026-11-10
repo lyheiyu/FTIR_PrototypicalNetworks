@@ -26,10 +26,43 @@ class utils:
          # if score is f1, recall, accuracy set the average to macro
             if score.__name__ == 'recall_score' or score.__name__ == 'precision_score' or score.__name__ == 'f1_score':
 
-                scoreList.append(score(y_true,y_pre,average='macro'))
+                scoreList.append(score(y_true,y_pre,average='macro',zero_division=0))
             else: scoreList.append(score(y_true,y_pre))
             # print(score.__name__,score(y_true,y_pre))
         return scoreList
+
+    @staticmethod
+    def classification_metrics(y_true, y_pred, labels, class_names):
+        """Named legacy metrics, per-class scores and an explicit-label CM."""
+        from sklearn.metrics import classification_report, confusion_matrix
+        if len(labels) != len(class_names):
+            raise ValueError('labels and class_names must have the same length')
+        scores = utils.printScore(y_true, y_pred)
+        metrics = dict(zip(
+            ['kappa', 'macro_f1', 'accuracy', 'macro_precision', 'macro_recall'], scores
+        ))
+        report = classification_report(
+            y_true, y_pred, labels=labels, target_names=class_names,
+            output_dict=True, zero_division=0
+        )
+        cm = confusion_matrix(y_true, y_pred, labels=labels)
+        return metrics, report, cm
+
+    @staticmethod
+    def draw_confusion_matrix(ax, cm, class_names, title):
+        """Draw row-normalized CM with a fixed 0..1 scale; never open a GUI."""
+        cm = np.asarray(cm, dtype=float)
+        totals = cm.sum(axis=1, keepdims=True)
+        normalized = np.divide(cm, totals, out=np.zeros_like(cm), where=totals != 0)
+        artist = ax.imshow(normalized, cmap='Blues', vmin=0, vmax=1)
+        ax.set(xticks=np.arange(len(class_names)), yticks=np.arange(len(class_names)),
+               xticklabels=class_names, yticklabels=class_names,
+               xlabel='Predicted label', ylabel='True label', title=title)
+        for i in range(len(class_names)):
+            for j in range(len(class_names)):
+                ax.text(j, i, f'{normalized[i, j]:.2f}', ha='center', va='center',
+                        color='white' if normalized[i, j] > 0.5 else 'black', fontsize=8)
+        return artist
     def mkdir(path):
         # 判断目录是否存在
         # 存在：True

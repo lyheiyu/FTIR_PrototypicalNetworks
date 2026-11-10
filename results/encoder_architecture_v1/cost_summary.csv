@@ -1,0 +1,3 @@
+architecture,parameters,training_seconds,optimizer_updates,inference_median_ms_per_spectrum,all_spectra_feature_extraction_seconds,model_file_bytes
+M0,47872.0,125.79127256666662,1340.0,0.30856041666622097,0.8911138222221966,221063.0
+M1,47400.0,135.46116800000007,1340.0,0.28666163194445027,0.9693017777778058,231860.0

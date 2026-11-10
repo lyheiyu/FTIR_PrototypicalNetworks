@@ -196,7 +196,7 @@ class EMSA:
 
 if __name__ == '__main__':
     from sklearn.model_selection import train_test_split
-    polymerName, waveLength, intensity, polymerID, x_each, y_each = utils.parseData11('D4_4_publication11.csv', 1200, 1700)
+    polymerName, waveLength, intensity, polymerID, x_each, y_each = utils.parseData11('dataset/D4_4_publication11.csv', 2, 1763)
     # from FTIR_dataGenerateByConcentratedNet import TwoDimensionalAugmentation
 
     cmTotal = np.zeros((11, 11))
@@ -208,7 +208,7 @@ if __name__ == '__main__':
         waveLength = np.array(waveLength, dtype=np.float)
         datas=[]
         datas2 = []
-        PN = utils.getPN('D4_4_publication11.csv')
+        PN = utils.getPN('dataset/D4_4_publication11.csv')
         for n in range(len(PN)):
             numSynth = 2
             indicesPS = [l for l, id in enumerate(y_train) if id == n]
@@ -239,7 +239,7 @@ if __name__ == '__main__':
                 augmented = []
                 for augmented_spectrum, label in zip(*batch):
 
-                    plt.plot(waveLength, augmented_spectrum, label=label)
+                    # plt.plot(waveLength, augmented_spectrum, label=label)
                     augmented.append (augmented_spectrum)
                 augmentedSpectrum.append(augmented)
                 # plt.gca().invert_xaxis()
@@ -260,12 +260,13 @@ if __name__ == '__main__':
         # random.seed(randnum)
         # random.shuffle(y_train)
         #x_train, x_test0, y_train, y_test0 = train_test_split(x_train, y_train, test_size=0.1, random_state=1)
-        model = svm.SVC(C=0.3, kernel='linear', decision_function_shape='ovo')
+        # model = svm.SVC(C=0.3, kernel='linear', decision_function_shape='ovo')
+        model = svm.SVC(C=0.3, kernel='linear', decision_function_shape='ovo', random_state=0)
         model = model.fit(x_train, y_train)
         y_pre = model.predict(x_test)
 
         utils.printScore(y_test, y_pre)
-        PN = utils.getPN('D4_4_publication11.csv')
+        PN = utils.getPN('dataset/D4_4_publication11.csv')
         t = classification_report(y_test, y_pre, target_names=PN, output_dict=True)
         # SVM_report = pd.DataFrame(t)
         # SVM_report.to_csv('SVM_report5.csv')

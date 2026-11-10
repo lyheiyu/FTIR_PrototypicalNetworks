@@ -1,0 +1,29 @@
+{
+  "source_sha256": "91376866da67a018d4c1fdc0173696c7fadc932b45a371e2e7d39cf2d7b58604",
+  "paragraphs": 297,
+  "tables": 6,
+  "embedded_figures": 0,
+  "numeric_issues": [
+    {
+      "table": 4,
+      "row": 5,
+      "column": 2,
+      "manuscript": "90.02",
+      "expected_2dp": "90.01"
+    },
+    {
+      "table": 5,
+      "row": 1,
+      "column": 1,
+      "manuscript": "99.12",
+      "expected_2dp": "99.11"
+    },
+    {
+      "table": 5,
+      "row": 2,
+      "column": 4,
+      "manuscript": "−3.42",
+      "expected_2dp": "-3.41"
+    }
+  ]
+}

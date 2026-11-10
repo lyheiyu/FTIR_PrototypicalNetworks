@@ -1,0 +1,7 @@
+{
+  "tasks": [
+    {"name": "holdout_hdpe_ldpe", "base": ["PET", "PVC", "PP", "PS"], "novel_sessions": [["HDPE"], ["LDPE"]]},
+    {"name": "holdout_pp_ps", "base": ["PET", "HDPE", "PVC", "LDPE"], "novel_sessions": [["PP"], ["PS"]]},
+    {"name": "holdout_pet_pvc", "base": ["HDPE", "LDPE", "PP", "PS"], "novel_sessions": [["PET"], ["PVC"]]}
+  ]
+}

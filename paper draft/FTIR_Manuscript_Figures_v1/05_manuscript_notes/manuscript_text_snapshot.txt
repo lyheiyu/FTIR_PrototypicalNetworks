@@ -1,0 +1,297 @@
+0: Class-Specific Mahalanobis Prototypes for Few-Shot Class-Incremental Microplastic Identification Using FTIR Spectroscopy
+1: Rewritten English research manuscript — working version (22 October 2026).
+2: Authors and affiliations: to be inserted and verified against the final author list.
+3: Abstract
+4: Accurate Fourier transform infrared (FTIR) classification of polymer spectra does not necessarily ensure that a trained classifier can accommodate newly encountered polymer categories with few labelled examples. We investigate a few-shot class-incremental framework that separates spectral representation learning from statistical class registration. Two related FTIR-Plastics subsets with nominal 4 and 8 cm⁻¹ spectral resolutions (C4 and C8) were harmonised to a common physical wavenumber grid. A compact 128-dimensional multiscale convolutional encoder was trained using either supervised cross-entropy or genuine episodic Prototypical Network learning. After training, the encoder was frozen, and each class was represented by a prototype and a class-specific covariance estimate. We compared Euclidean prototypes, ridge-regularised full Mahalanobis prototypes, and shrinkage Mahalanobis prototypes incorporating a base-class covariance prior in a 4+1+1 incremental protocol. At the final six-class session, episodic encoding with shrinkage achieved 96.53% and 96.03% overall accuracy in within-resolution C4 and C8 evaluations, respectively, averaged over the predefined 5- and 10-shot settings. Mixed-resolution base reference banks reduced accuracy to 80.40% and 78.48%, whereas target-resolution base references increased it to 94.40% and 95.92% without updating encoder parameters. A dimension-matched frozen PCA128 representation with the same shrinkage head nevertheless obtained higher overall accuracy in all six evaluation configurations. The results demonstrate feasible prototype-based registration of new polymer categories while establishing that covariance shrinkage and cross-resolution reuse are conditional on reference-spectrum compatibility. They do not support universal superiority of episodic representation learning or neural embeddings over simpler spectral representations.
+5: Keywords: Microplastics; FTIR spectroscopy; few-shot learning; class-incremental learning; Prototypical Networks; class-specific Mahalanobis distance; covariance shrinkage; spectral resolution.
+6: 1. Introduction
+7: Microplastic contamination creates a substantial analytical burden because environmental particles may originate from multiple polymer families and often occur in complex sampling contexts. Fourier transform infrared (FTIR) spectroscopy identifies polymers through characteristic vibrational features and provides a common basis for automated spectral classification. Machine-learning approaches, including support vector machines (SVM), nearest-neighbour methods and neural networks, have therefore been applied to FTIR-based microplastic identification (Primpke et al., 2018; Renner et al., 2019; Yan et al., 2022). Although high recognition accuracy is achievable for a predefined collection of polymers, accuracy alone does not describe the effort required to incorporate previously unseen categories into a deployed model.
+8: In a conventional closed-set classification workflow, the set of output categories is fixed when the classifier is trained. Introducing a new polymer category may require collecting labelled examples and refitting the discriminative decision function. The additional cost can become relevant when a spectral library is extended incrementally, particularly if a laboratory has only a few reliable labelled spectra for the arriving category. Importantly, this limitation is not shared equally by all established algorithms: a nearest-neighbour reference bank can be expanded without gradient-based training, whereas a standard multiclass SVM is normally refitted to include the new label. The practical question is therefore not simply whether deep learning exceeds established classifiers in accuracy, but whether class registration can be performed economically while preserving recognition of previously known polymers.
+9: Few-shot learning addresses classification with limited labelled support examples. Prototypical Networks learn an embedding in which a class is summarised by the mean of its support representations and queries are assigned according to their distance from class prototypes (Snell et al., 2017). This architecture naturally separates a reusable feature encoder from a small class-dependent statistical state. However, the conventional squared Euclidean metric assumes identical geometry across categories; it does not explicitly reflect the possibility that different polymers exhibit unequal or direction-dependent variability in feature space.
+10: Mahalanobis distance allows a class to be represented by both its central prototype and a covariance structure (De Maesschalck et al., 2000). Its application is challenging in a high-dimensional few-shot setting, because empirical covariance matrices are rank-deficient when the number of support examples is small. Covariance shrinkage offers one regularisation strategy: the covariance estimated from arriving support examples is combined with a more stable prior estimated from the legally available source-training classes. Such a prior is not universally beneficial, however. Its statistical assumptions may be violated when reference spectra and queries are obtained at different resolutions or under incompatible measurement conditions.
+11: A further challenge for reusable FTIR classifiers is the heterogeneity of the spectral axis. Measurements may be recorded with different sampling intervals, producing input vectors of unequal length. Harmonisation onto a common physically defined wavenumber grid can make representations computationally compatible, although interpolation does not recover spectral information that was never acquired. We study two nominal-resolution subsets, C4 and C8, from the FTIR-Plastics resource (Villegas-Camacho et al., 2024), and explicitly distinguish within-resolution class increment, mixed-resolution transfer, and transfer aided by a target-resolution base-class reference library.
+12: Earlier work by the authors investigated ensemble classification of FTIR microplastics (Yan et al., 2022) and fingerprint-region data augmentation (Yan et al., 2023). The present study addresses a different problem: the statistical registration of novel polymer classes into an unchanged feature space. Although the original project also considered extended multiplicative signal augmentation (EMSA/ESMA) and additional FTIR datasets, those are not part of the final controlled experiments reported here. The analysis instead centres on representation learning, prototype distance, class retention and source–target reference compatibility.
+13: The study asks three connected questions. First, how do conventional spectral classifiers and different frozen representations perform under the same class-incremental evaluation? Second, does class-specific Mahalanobis geometry, with or without covariance shrinkage, improve on standard Euclidean prototypes when the encoder is held fixed? Third, to what extent can a trained representation be reused across nominal spectral resolutions without re-estimating its parameters, and what role is played by the source of the stored base-class references? The contribution is an audited experimental and modelling framework for answering these questions, not a claim that the underlying Mahalanobis or shrinkage mathematics is entirely new.
+14: 2. Materials and methods
+15: 2.1. FTIR datasets and polymer classes
+16: The primary experiments use the FTIR-Plastics dataset described by Villegas-Camacho et al. (2024). The resource includes nominal 4 cm⁻¹ (C4) and 8 cm⁻¹ (C8) spectral-resolution subsets, each originally containing 3,000 spectra across six common polymer categories: polyethylene terephthalate (PET), high-density polyethylene (HDPE), polyvinyl chloride (PVC), low-density polyethylene (LDPE), polypropylene (PP), and polystyrene (PS). Each subset contains 500 spectra per category in its original description. C4 and C8 are treated as related data sources, not as independently collected instruments or laboratories.
+17: Possible repeated records and cross-subset aliases were grouped conservatively before partitioning; the audit identified 2,047 conservative record components. Source training, source validation, support and final query groups were separated according to the saved manifests. This limits observable record-level overlap but does not prove that all groups correspond to distinct physical specimens. The study therefore reports data-source transfer between nominal resolutions rather than external cross-instrument validation. Exact acquisition metadata, including whether the stored signal represents absorbance or transmittance, remain subject to source-document verification.
+18: 2.2. Preprocessing and common spectral grid
+19: All experiments use a locked physical wavenumber representation with 1,868 input coordinates spanning approximately 399.19 to 4,000.60 cm⁻¹. Consistent with the completed pipeline, each spectrum undergoes adaptive iteratively reweighted penalised least-squares (airPLS) baseline correction on its native sampling grid, followed by maximum-absolute-value normalisation and cubic interpolation to the shared physical grid. The same transformation order is used across C4 and C8; no query-specific preprocessing parameters are fitted. airPLS is a widely used baseline-correction approach for spectroscopy (Zhang et al., 2010).
+20: Cubic interpolation provides a computationally consistent spectral axis, allowing the same encoder to process vectors from either subset. This operation should not be interpreted as restoring higher-resolution instrumental information. The native-grid airPLS smoothing scale is indexed by the original sampling points, so identical nominal smoothing parameters do not guarantee equivalent physical smoothing widths across the two resolutions. The present experiments fix this preprocessing choice instead of selecting an alternative based on final query accuracy.
+21: 2.3. Few-shot class-incremental problem formulation
+22: For each held-out polymer task, four classes form the source (base) label set and two different polymer classes are hidden from all encoder-training and source-validation procedures. The class sequence comprises Session 0, containing the four base categories; Session 1, after the arrival of the first novel category; and Session 2, after the second novel category has been registered. The final problem therefore contains six classes and follows a 4+1+1 arrival protocol. Three two-novel-class tasks and three random seeds are used, with 200 paired evaluation episodes per task–seed combination.
+23: At each session, source base-class prototypes are formed from 20 labelled reference spectra per base category. Each arriving novel class is registered from K labelled support spectra, with K ∈ {1, 5, 10, 20}; the principal analysis averages the prespecified 5- and 10-shot conditions. The balanced final query protocol supplies 15 query spectra per present class. All comparisons reuse the same episode-level partitions and arrival order, so differences between classifiers are paired within tasks and seeds. For the target-aligned settings described later, an additional 20 labelled target-resolution reference spectra per base class are provided.
+24: Class increment is defined here as an update to stored class statistics only. The encoder remains frozen, no old category prototype or covariance state is re-estimated when another category arrives, and no global multi-class discriminative classifier is refitted for the prototype methods. Because predictions depend on the distances to every stored class, the introduction of a new prototype can nonetheless change decisions for previously recognised categories. No parameter update does not mean no loss in old-class recognition accuracy.
+25: 2.4. Spectral representations and encoder training
+26: We consider original preprocessed spectral vectors, principal component representations and learned neural embeddings. As a conventional linear representation control, PCA128 is fitted only on the source base-training spectra corresponding to a task and then frozen. It uses the same saved split as the earlier PCA64 control, the same randomised decomposition settings and no whitening; only the number of retained components changes. Neither PCA basis is refitted to new-class support or final query data. PCA is a feature representation, not itself a standalone closed-set classifier, and is always named jointly with its decision head when classification accuracy is reported.
+27: The learned feature extractor M1 is a position-preserving multiscale one-dimensional convolutional network with approximately 47,400 trainable parameters and a 128-dimensional embedding. Two training objectives are compared on the same model family and with matched source-only class tasks. In the cross-entropy (CE-M1) condition, a temporary linear classification layer is trained to discriminate the four source classes; this layer is discarded at incremental evaluation. In the episodic (EP-M1) condition, each training update forms a 4-way episode with five labelled support and ten query spectra per class, computes the class prototype means from support embeddings and backpropagates query cross-entropy based on Euclidean prototype distances. This is genuine end-to-end episodic ProtoNet training, rather than ordinary supervised pretraining followed by a prototype classifier.
+28: The episodic runs use Adam (learning rate 0.001) for 60 epochs; the saved per-task training budgets contain 780, 960 or 840 optimizer updates. Source-only validation uses a fixed collection of 20 episodes per epoch with four classes, five support and four query observations per class, selecting the checkpoint with the lowest validation-query cross-entropy. The CE encoders reuse the established checkpoints and were not retrained for the final PCA comparison. Although optimizer update counts were aligned, the CE and EP objectives differ in supervision, class-balanced episode sampling and exposure to support/query examples; their comparison should not be treated as an isolated causal test of the episodic loss alone.
+29: An earlier compact M0 encoder was investigated during method development. Its architecture may be described in the final implementation appendix if the archived results can be matched to the exact present splits; no unverified M0 accuracy is inserted into this manuscript. The main controlled representation comparison reported here uses PCA128, CE-M1-128 and EP-M1-128 with an identical shrinkage prototype classifier.
+30: 2.5. Euclidean and class-specific Mahalanobis prototypes
+31: Let fθ(x) ∈ Rᵈ be a frozen feature extractor, where d = 128 for the principal comparisons. For class c with Kc support vectors, the prototype is the sample mean of the class embeddings:
+32: μc = (1/Kc) Σi fθ(xc,i).                                            (1)
+33: The standard Prototypical Network assigns a query representation z = fθ(x) to the class minimising squared Euclidean distance:
+34: DE,c(z) = (z − μc)ᵀ(z − μc).                                  (2)
+35: To model class-dependent variation, the unregularised empirical within-class covariance is estimated from support residuals using the locked 1/Kc convention:
+36: Σ̂c = (1/Kc) Σi (fθ(xc,i) − μc)(fθ(xc,i) − μc)ᵀ.     (3)
+37: The ridge-regularised class-specific full Mahalanobis classifier then uses:
+38: Dfull,c(z) = (z − μc)ᵀ(Σ̂c + εI)⁻¹(z − μc),     ε = 0.001.         (4)
+39: For small Kc, rank(Σ̂c) ≤ Kc − 1, making an unregularised inverse impossible in 128 dimensions. Equation (4) fixes the ridge to the audited value and does not adapt it after observing target-query outcomes. The classifier compares these quadratic distances directly; no Gaussian log-determinant penalty is added to the score.
+40: 2.6. Base-prior covariance shrinkage
+41: The shrinkage classifier combines the individual support covariance with a pooled within-class covariance prior estimated solely from the legal base-training embeddings in the source domain. With the fixed shrinkage strength τ = 5,
+42: αc = (Kc − 1)/(Kc − 1 + τ) = (Kc − 1)/(Kc + 4),       τ = 5.    (5)
+43: Σ̃c = αc Σ̂c + (1 − αc) Σbase + εI,        ε = 0.001.              (6)
+44: Dshrink,c(z) = (z − μc)ᵀ Σ̃c⁻¹(z − μc).                            (7)
+45: For a single support example, αc = 0, so the source prior supplies all covariance information; as support size increases, the class-specific empirical term receives more weight. The same fixed formula applies to base and new categories according to their number of stored reference spectra. Only the arriving category’s prototype and covariance are newly registered at a class-incremental step. The source prior, all pre-existing class statistics and the feature extractor remain unchanged.
+46: The pooled prior improves stability only to the extent that its geometry is representative of the evaluated target features. Moreover, the fixed numerical ridge ε = 0.001 has different relative strength when the embedding scales differ. The observed source-training feature norms are approximately 110.79/105.58 for C4/C8 CE encoders and 10.52/8.42 for the corresponding EP encoders; accordingly, differences between CE and EP cannot be attributed exclusively to the loss function or the statistical classifier.
+47: 2.7. Baselines and update requirements
+48: Raw-spectrum 1-NN is a training-free labelled-reference classifier that adds newly labelled class examples to its memory when a polymer arrives. Raw-spectrum SVM is retained as a strong discriminative baseline and is refitted for the enlarged label set using the permitted labelled information. Neither method should be conflated with the PCA plus shrinkage prototype scheme. The latter first fits a frozen source-only spectral representation and then applies the same class-registration mechanism used for the neural embeddings. The neural method is therefore not claimed to be the only approach supporting class-incremental registration without feature retraining.
+49: 3. Experimental design
+50: 3.1. Within-resolution and bidirectional transfer configurations
+51: Six locked evaluation configurations separate training-source effects from reference-library compatibility. In A and B, the encoder, base-class reference spectra, new-class support and final queries all belong to the same resolution. In C and D, the encoder and stored base-class references remain at the source resolution while new-class supports and all queries come from the opposite resolution. In E and F, the encoder is still trained only at the source resolution, but the base-class reference bank is replaced by labelled target-resolution spectra. Thus, E and F require extra target-domain base labels and are not zero-shot transfer experiments.
+52: Table 1. Definition of the six experimental configurations.
+53: Setting
+54: Encoder fit
+55: Base references
+56: Novel support
+57: Query
+58: A — C4 same
+59: C4
+60: C4
+61: C4
+62: C4
+63: B — C8 same
+64: C8
+65: C8
+66: C8
+67: C8
+68: C — C4→C8
+69: C4
+70: C4
+71: C8
+72: C8
+73: D — C8→C4
+74: C8
+75: C8
+76: C4
+77: C4
+78: E — C8-aligned
+79: C4
+80: C8*
+81: C8
+82: C8
+83: F — C4-aligned
+84: C8
+85: C4*
+86: C4
+87: C4
+88: 
+89: *E and F use an additional 20 labelled target-resolution base-class spectra for each of the four base categories. They are more-data conditions than C and D.
+90: 3.2. Reporting and comparison rules
+91: The primary outcome is final-session six-class overall accuracy, with macro-averaged F1 and combined novel-class accuracy reported alongside base-class retention and inter-class confusion. Primary tables present the mean of 5- and 10-shot results, first averaging the 200 paired episodes within each task–seed cell and then averaging the nine task–seed cells. Additional shot levels, intermediate sessions and detailed confusion counts are available in the saved experiment archives. The balanced 15-query-per-class protocol makes the overall six-class accuracy correspond to a four-base/two-novel class-weighted average, but pooled episode confusion counts must not be mistaken for independent specimens.
+92: All comparisons are descriptive. Three tasks are formed from the same underlying data family, and neither three seeds nor 200 repeated episodes constitute independent datasets. No inferential significance claim is made from treating those repeated predictions as independent observations. The final protocol was evaluated after related development experiments had already examined C4/C8 data; the resulting holdouts are therefore not claimed to be untouched external confirmation.
+93: 4. Results
+94: 4.1. Conventional spectral classification baselines
+95: The first comparison establishes the achievable accuracy of well-established spectral classifiers before assessing representations and the proposed metric head. Table 2 reports raw-spectrum 1-NN and SVM under the matched final-session protocol. These baselines are important because high closed-set classification performance does not by itself imply that a classifier can be expanded without refitting. A nearest-neighbour memory can accept an additional labelled class by storing the new examples, whereas a standard multiclass SVM is refitted to include the additional class. The comparison therefore provides both a performance reference and an operational update-cost distinction.
+96: Table 2. Conventional classifiers: final six-class accuracy (%) averaged across the primary 5/10-shot settings.
+97: Setting
+98: Raw-spectrum 1-NN
+99: Raw-spectrum SVM
+100: SVM update
+101: 1-NN update
+102: A
+103: 94.87
+104: 94.61
+105: Refit
+106: Add references
+107: B
+108: 95.80
+109: 96.09
+110: Refit
+111: Add references
+112: C
+113: 82.98
+114: 86.45
+115: Refit
+116: Add references
+117: D
+118: 84.47
+119: 83.19
+120: Refit
+121: Add references
+122: E
+123: 95.80
+124: 96.09
+125: Refit
+126: Add references
+127: F
+128: 94.87
+129: 94.61
+130: Refit
+131: Add references
+132: 
+133: The conventional baselines remained strong in several settings, including SVM accuracy of 96.09% in B and 86.45% in C. Therefore, the purpose of the proposed framework is not to imply that traditional classifiers are generally inaccurate. Rather, the subsequent analysis investigates class-statistical alternatives that explicitly separate a frozen representation from new-class registration.
+134: 4.2. Feature-representation comparison under a fixed shrinkage head
+135: The second comparison fixes the class-statistical decision rule and changes the underlying feature representation. Table 3 compares frozen PCA128, supervised CE-M1-128 and episodic EP-M1-128, all paired with exactly the same shrinkage Mahalanobis formulation and final evaluation episodes. PCA128 is included here as a linear representation baseline, not as a conventional closed-set classifier. This organisation avoids incorrectly attributing differences caused by a new classifier head to the encoder.
+136: Table 3. Dimension-matched representation comparison with the same shrinkage Mahalanobis head; cells show Accuracy / Macro-F1 (%).
+137: Setting
+138: PCA128 + shrinkage
+139: CE-M1-128 + shrinkage
+140: EP-M1-128 + shrinkage
+141: A
+142: 97.48 / 97.41
+143: 95.15 / 95.13
+144: 96.53 / 96.46
+145: B
+146: 97.81 / 97.79
+147: 95.84 / 95.85
+148: 96.03 / 95.98
+149: C
+150: 89.16 / 88.91
+151: 77.25 / 76.18
+152: 80.40 / 79.88
+153: D
+154: 89.43 / 89.35
+155: 75.28 / 73.22
+156: 78.48 / 77.22
+157: E
+158: 97.01 / 96.98
+159: 94.43 / 94.42
+160: 94.40 / 94.36
+161: F
+162: 96.95 / 96.86
+163: 94.68 / 94.56
+164: 95.92 / 95.80
+165: 
+166: PCA128 achieved the highest overall accuracy in all six configurations despite sharing both output dimensionality (128) and decision-head type with the neural representations. The neural approach is therefore not established as a superior representation of FTIR polymer spectra. Relative to CE-M1 with the shrinkage head, EP-M1 improved overall accuracy in C and D by approximately 3.16 and 3.20 percentage points, respectively, but exhibited mixed or small changes elsewhere. This comparison remains conditional on the fixed head and cannot isolate training-objective effects from differences in class sampling and feature scale.
+167: In a complementary same-head test, episodic training did not improve genuine novel-class accuracy when a Euclidean prototype head was used. EP minus CE novel accuracy was negative in all configurations: −4.83, −6.02, −7.74, −2.91, −9.18 and −9.85 percentage points for A through F, respectively. This negative finding prevents interpreting an EP advantage in overall base-heavy accuracy as evidence that episodic training intrinsically improves generalisation to held-out polymer classes.
+168: 4.3. Ablation of prototype distance and covariance shrinkage
+169: The third comparison directly evaluates the class-specific metric component of the method. EP-M1 is kept fixed and only its distance head is changed. Table 4 contrasts the conventional squared Euclidean prototype, an independently estimated ridge-regularised class covariance, and the base-prior shrinkage formulation. The same support/query episodes and encoder checkpoint are used across each three-head comparison.
+170: Table 4. Main distance-head ablation on the fixed EP-M1 encoder; overall accuracy (%), final six-class session, primary 5/10-shot average.
+171: Setting
+172: Euclidean prototype
+173: Full Mahalanobis
+174: Shrinkage Mahalanobis
+175: Shrinkage − Full (pp)
+176: A
+177: 88.87
+178: 92.23
+179: 96.53
+180: +4.30
+181: B
+182: 87.54
+183: 91.41
+184: 96.03
+185: +4.62
+186: C
+187: 72.19
+188: 80.99
+189: 80.40
+190: −0.59
+191: D
+192: 68.68
+193: 80.44
+194: 78.48
+195: −1.96
+196: E
+197: 81.39
+198: 90.02
+199: 94.40
+200: +4.39
+201: F
+202: 77.20
+203: 91.30
+204: 95.92
+205: +4.61
+206: 
+207: Both covariance-aware heads improved the final-session overall accuracy relative to the standard Euclidean prototype across all six configurations. In the same-resolution settings A and B, shrinkage added 4.30 and 4.62 percentage points over full class covariance. In the target-aligned E and F settings, corresponding improvements were 4.39 and 4.61 points. These results are consistent with covariance regularisation reducing instability in low-shot classification when the prior and support/query geometry are compatible.
+208: The mixed-resolution settings reveal an important trade-off. In C and D, shrinkage yielded lower overall accuracy than full covariance by 0.59 and 1.96 points, although its combined novel-class accuracy was higher by 12.86 and 10.73 points. For EP-M1, the base-to-novel error rate under shrinkage was 13.98% in C and 19.12% in D, compared with 2.20% and 3.51% under the full covariance head. Improved detection of genuine novel classes is therefore not equivalent to improved six-class incremental recognition. The most plausible interpretation is conditional mismatch among the source-derived prior, stored base references and target-query geometry, rather than an unconditional advantage for either metric.
+209: 4.4. Novel-category registration and retention of earlier classes
+210: To determine whether a high aggregate accuracy conceals loss of recognition for earlier categories, we separately examine base-class accuracy, the first newly registered class and the latest arriving class. Table 5 summarises the fixed EP-M1 plus shrinkage classifier. In mixed-resolution settings C and D, the combined novel-class accuracy was 95.44% and 92.14%, while base-class accuracy was only 72.88% and 71.65%. In the same conditions, the first novel category lost 3.43 and 5.95 points of accuracy from Session 1 to Session 2 despite its prototype being retained unchanged.
+211: Table 5. EP-M1 with shrinkage: base/novel recognition and previous-novel retention at the final session; accuracy and error rates in %.
+212: Setting
+213: Base accuracy
+214: Combined novel accuracy
+215: Base→novel errors
+216: Previous novel change (pp)
+217: A
+218: 99.12
+219: 91.35
+220: 0.86
+221: −6.34
+222: B
+223: 97.33
+224: 93.43
+225: 1.26
+226: −3.42
+227: C
+228: 72.88
+229: 95.44
+230: 13.98
+231: −3.43
+232: D
+233: 71.65
+234: 92.14
+235: 19.12
+236: −5.95
+237: 
+238: These analyses show why incremental learning should be evaluated with class-specific metrics. A new prototype can be highly recognisable because its few-shot support and query measurements share the same target-resolution characteristics, while older categories suffer from less compatible source-resolution reference statistics. This is a decision-competition effect and should not be labelled gradient-based catastrophic forgetting, since encoder weights and previously registered prototype parameters remain fixed.
+239: 4.5. Bidirectional transfer and target-reference alignment
+240: The strongest practical effect in the study arises from the source of the stored base-class reference spectra. With a C4 encoder and C4 base reference bank, transfer to C8 queries in C gave 80.40% accuracy. Keeping the same C4 encoder but drawing the base references from C8 in E increased the result to 94.40%, an improvement of 14.00 points. The reverse transfer from C8 to C4 increased from 78.48% in D to 95.92% in F, a gain of 17.44 points, when target-resolution base references replaced the source-resolution references.
+241: Table 6. Accuracy recovery (%) with target-resolution base reference banks; EP-M1 + shrinkage, final six-class session.
+242: Direction
+243: Mixed source references
+244: Target-aligned references
+245: Change (pp)
+246: Additional supervision
+247: C4-trained → C8 queried
+248: C: 80.40
+249: E: 94.40
+250: +14.00
+251: 20 labelled C8 spectra per base class
+252: C8-trained → C4 queried
+253: D: 78.48
+254: F: 95.92
+255: +17.44
+256: 20 labelled C4 spectra per base class
+257: 
+258: The encoder and source-domain covariance prior were not retrained for E or F. The gains therefore show that a reusable frozen representation can participate in high-performing class registration if compatible labelled old-class references are supplied. These experiments do not establish fully label-free domain adaptation: the improvement depends on additional target-resolution reference labels. They also do not establish generalisation across independent FTIR instruments because C4 and C8 are related subsets of one data resource.
+259: 4.6. Lower-dimensional PCA control and computational observations
+260: An additional audit compared PCA64 against dimension-matched PCA128 under the same shrinkage classifier and locked episodes. PCA128 and PCA64 gave similar results in most settings: the primary overall accuracies were 97.48% versus 97.26% in A, 97.81% versus 97.84% in B, 89.16% versus 89.25% in C, 89.43% versus 88.11% in D, 97.01% versus 96.98% in E and 96.95% versus 96.88% in F. Thus, the strong PCA performance cannot be explained solely by PCA64 having a smaller output dimension than the 128-dimensional neural encoder. The PCA decompositions were produced independently using the same randomised solver settings and were not forced to contain nested principal-component axes.
+261: The saved training logs recorded mean runtimes of 77.62 s for CE training and 71.94 s for EP training, with mean optimizer-update counts of 860 per task–seed comparison. Median CPU inference latency was approximately 0.279 and 0.277 ms per spectrum, respectively, under the documented batch-64 and four-thread setting. These wall-clock quantities are descriptive measurements from sequential runs rather than controlled between-method speed benchmarks. Prototype-head registration and classification timing is archived separately; the timing claims should not be extended to unmeasured data acquisition, manual annotation, preprocessing or full application deployment.
+262: 5. Discussion
+263: 5.1. From conventional classifiers to reusable class statistics
+264: The results support a more nuanced case for prototype-based class registration than a simple claim of superior accuracy. Raw-spectrum SVM and 1-NN were already competitive; in addition, PCA128 with class-specific shrinkage was consistently stronger than the neural alternative in mean overall accuracy. The value of a prototype-based incremental design instead lies in the explicit separation between fixed feature extraction and a small, updateable set of class statistics. Newly labelled spectra can be incorporated by forming the new mean and covariance without refitting the representation. This property is shared with certain simpler methods, such as nearest-neighbour memory and frozen PCA features, and should be described as a property of the framework rather than as an exclusive advantage of deep episodic training.
+265: 5.2. Interpretation of the Mahalanobis and shrinkage ablations
+266: The matched-head experiments show that replacing Euclidean distances by class-dependent Mahalanobis distances can substantially improve incremental classification under the tested protocols. Shrinkage is especially useful in same-resolution and target-aligned conditions where high-dimensional sample covariance is poorly determined but the source prior remains reasonably compatible. The empirical covariance of a 5-shot new class has rank at most four in a 128-dimensional embedding, so the stabilising role of a prior is statistically plausible. However, in C and D the same prior was associated with increased base-to-novel confusion and poorer overall accuracy relative to independent full class covariance. The results therefore support covariance shrinkage as a conditional design choice, not a universal improvement across domains.
+267: Because the full and shrinkage models differ in prior access as well as covariance regularisation, their comparison does not uniquely identify shrinkage as the sole cause of improved accuracy. The present fixed scheme also does not isolate class-balanced episodic sampling, embedding scale, learned loss geometry and ridge strength as separate causal mechanisms. These distinctions should remain explicit in the claims.
+268: 5.3. Representation learning and the strong PCA baseline
+269: A central negative result is that genuine episodic pretraining did not consistently increase the accuracy of held-out novel categories relative to CE pretraining when both were tested with Euclidean prototypes. The fact that EP performance improved under some other heads indicates an interaction between representation geometry and the downstream metric, not an unconditional benefit of episodic learning. The learned encoder operated in a substantially different feature-norm regime from the CE encoder, so a fixed numerical ridge is not a representation-invariant regulariser.
+270: The PCA128 results further demonstrate that sophisticated representation learning is not a prerequisite for effective class-statistical registration on these spectra. Crucially, the PCA representation used no novel-query information and remained frozen after fitting the base-training set. It can therefore also be used in a non-retraining incremental process. The study is more defensibly presented as an investigation of covariance-aware prototype mechanics and reference-library compatibility than as proof that multiscale neural embeddings surpass linear spectroscopy features.
+271: 5.4. Implications for plastic identification workflows
+272: For an FTIR monitoring or polymer-identification workflow, the class-statistical approach offers a clear operational option: initialise a fixed source representation, retain labelled references for known polymers and register newly encountered categories from a small support set. The bidirectional tests show that compatible base references may be especially important when the spectral resolution changes, even if preprocessing produces vectors on the same physical axis. In practice, this implies that updating a reference library may be more effective than retraining a feature encoder in some transfer scenarios. Yet the additional target references required for E and F are an explicit data cost, and the present study did not measure human labelling time, instrument transfer costs or reductions in environmental impacts.
+273: 5.5. Limitations and scope of inference
+274: Several limitations constrain external interpretation. The record-group audit was conservative but could not verify independent physical specimens. C4 and C8 originate from a related dataset family and do not represent new laboratories or independently characterised instruments. Original absorbance/transmittance semantics were not confirmed, and the airPLS native-index smoothing procedure can correspond to different physical scales. The two sources were examined during development, so the final evaluation is exploratory rather than independently untouched validation. Repeated episodes, different random seeds and held-out class tasks are dependent measurements over related data. Consequently, reported differences are descriptive and do not justify claims of statistically significant gains without an analysis that respects the appropriate independent units.
+275: Finally, equal embedding dimensionality between PCA128 and M1-128 does not equalise distributional geometry, supervision, scaling or the relative regularisation imposed by εI. Neither the same nominal FTIR grid nor high recognition accuracy in target-aligned conditions proves transfer to unrelated instruments, environmental matrices, mixed polymer particles or heavily degraded microplastics. Addressing these issues would require independent acquisition and specimen metadata, but they are not retroactively claimed as part of the present completed experiment.
+276: 6. Conclusion
+277: This study assessed covariance-aware prototypical classifiers for few-shot class-incremental identification of FTIR polymer spectra. In a frozen episodic multiscale encoder, class-specific Mahalanobis distances improved on standard Euclidean prototypes in all evaluated configurations, while base-prior covariance shrinkage produced further gains mainly under within-resolution or target-aligned reference conditions. Two-way C4/C8 transfer exposed a pronounced disparity between accurate novel-class recognition and degraded retention of older classes when source-resolution base references were mixed with target-resolution queries. Matching old-class references to the target resolution restored high overall accuracy without retraining the encoder, but required extra labelled target-domain examples. Importantly, frozen PCA128 with the same shrinkage head remained a stronger overall accuracy baseline. These findings define both a workable strategy for statistical new-class registration and the conditions under which its spectral-reference assumptions limit reuse.
+278: References
+279: Back, H. de M., Vargas Junior, E. C., Alarcon, O. E., and Pottmaier, D. (2022). Training and evaluating machine learning algorithms for ocean microplastics classification through vibrational spectroscopy. Chemosphere, 287, 131903. https://doi.org/10.1016/j.chemosphere.2021.131903
+280: Blazhko, U., Shapaval, V., Kovalev, V., and Kohler, A. (2021). Comparison of augmentation and pre-processing for deep learning and chemometric classification of infrared spectra. Chemometrics and Intelligent Laboratory Systems, 215, 104367. https://doi.org/10.1016/j.chemolab.2021.104367
+281: De Maesschalck, R., Jouan-Rimbaud, D., and Massart, D. L. (2000). The Mahalanobis distance. Chemometrics and Intelligent Laboratory Systems, 50, 1–18.
+282: Primpke, S., Wirth, M., Lorenz, C., and Gerdts, G. (2018). Reference database design for the automated analysis of microplastic samples based on Fourier transform infrared (FTIR) spectroscopy. Analytical and Bioanalytical Chemistry, 410, 5131–5141. https://doi.org/10.1007/s00216-018-1156-x
+283: Renner, G., Nellessen, A., Schwiers, A., Wenzel, M., Schmidt, T. C., and Schram, J. (2019). Data preprocessing and evaluation used in the microplastics identification process: A critical review and practical guide. TrAC Trends in Analytical Chemistry, 111, 229–238. https://doi.org/10.1016/j.trac.2018.12.004
+284: Snell, J., Swersky, K., and Zemel, R. (2017). Prototypical networks for few-shot learning. Advances in Neural Information Processing Systems, 30.
+285: Villegas-Camacho, O., Alejo-Eleuterio, R., Francisco-Valencia, I., Granda-Gutiérrez, E., Martínez-Gallegos, S., and Illescas, J. (2024). FTIR-Plastics: A Fourier Transform Infrared Spectroscopy dataset for the six most prevalent industrial plastic polymers. Data in Brief, 55, 110612. https://doi.org/10.1016/j.dib.2024.110612
+286: Yan, X., Cao, Z., Murphy, A., and Qiao, Y. (2022). An ensemble machine learning method for microplastics identification with FTIR spectrum. Journal of Environmental Chemical Engineering, 10, 108130. https://doi.org/10.1016/j.jece.2022.108130
+287: Yan, X., Cao, Z., Murphy, A., Ye, Y., Wang, X., and Qiao, Y. (2023). FRDA: Fingerprint Region based Data Augmentation using explainable AI for FTIR based microplastics classification. Science of the Total Environment, 896, 165340. https://doi.org/10.1016/j.scitotenv.2023.165340
+288: Zhang, Z. M., Chen, S., and Liang, Y. Z. (2010). Baseline correction using adaptive iteratively reweighted penalized least squares. Analyst, 135, 1138–1146. https://doi.org/10.1039/b922045c
+289: Author verification notes (remove before submission)
+290: Confirm the author list, affiliations, contribution roles and acknowledgments from the original manuscript; its affiliation labels were inconsistent.
+291: Check the source of each saved statistic against the final audited CSVs, particularly Macro-F1 values reported to two decimals, the SVM refit baseline and the M0 checkpoint provenance.
+292: Copy the exact M1 layer definition, preprocessing parameter values and dataset identifiers from the final implementation; those details are not fully available in the uploaded old draft.
+293: Confirm the original FTIR-Plastics measurement units (absorbance/transmittance) and native physical wavenumber coverage with source documentation.
+294: Prepare a workflow figure (base training → freeze encoder → sequential class registration), a 4+1+1 episode diagram and class-normalised confusion matrices from the archived results; do not fabricate visuals.
+295: Add the full independent-data and task-aware statistical uncertainty reporting if available, without treating the 200 repeated episodes as independent samples.
+296: Check references and journal house style before submission. Existing cited literature was carried forward from the original file; this manuscript does not assert a completed up-to-date systematic literature review.
